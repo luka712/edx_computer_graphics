@@ -183,7 +183,6 @@ mat4 Transform::translate(const float& tx, const float& ty, const float& tz)
 // orthogonal and normalized up. 
 // This function is provided as a helper, in case you want to use it. 
 // Using this function (in readfile.cpp or display.cpp) is optional.  
-
 vec3 Transform::upvector(const vec3& up, const vec3& zvec)
 {
 	vec3 x = glm::cross(up, zvec);

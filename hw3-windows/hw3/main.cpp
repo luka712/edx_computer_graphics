@@ -10,146 +10,24 @@
 #include "loadbmp.h"
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
+#include "bones_raytracer.hpp"
 
-struct Camera
-{
-	bns::Vec3F LookFrom;
-	bns::Vec3F LookAt;
-	bns::Vec3F up;
-	F32 FOV;
-};
-
-template<typename T>
-struct Intersection
-{
-	F32 MinDist;
-	T* HitObject;
-};
 
 std::vector<bns::Vec3F> vertices;
-std::vector<bns::TriangleF> triangles;
+std::vector<bns::BaseShape*> shapes;
+std::vector<bns::ColorF> ambient_colors;
 
-//bns::Vec3F upvector(const bns::Vec3F& up, const bns::Vec3F& zvec)
-//{
-//	bns::Vec3F x = bns::Vec3F::Cross(up, zvec);
-//	bns::Vec3F y = bns::Vec3F::Cross(zvec, x);
-//	y.Normalize();
-//	return y;
-//}
-
-bns::RayF RayThroughPixel(Camera cam, I32 i, I32 j, I32 width, I32 height)
-{
-	// Steps
-	// 1. Create a coordinate frame for the camera
-	// 2. Define a rotation matrix
-	// 3. Apply appropriate translation for camera ( eye ) location
-
-	//      a          b x w
-	// w = ---    u = -------       v = w x u
-	//    ||a||     || b x w ||
-
-	// a = eye - center
-	bns::Vec3F eye = cam.LookFrom;
-	bns::Vec3F center = cam.LookAt;
-	bns::Vec3F up = cam.up;
-
-	bns::Vec3F a = eye - center;
-	bns::Vec3F w = bns::Vec3F::Normalize(a);
-
-	bns::Vec3F b = bns::Vec3F::Normalize(up);
-
-	bns::Vec3F b_cross_w = bns::Vec3F::Cross(b, w);
-	bns::Vec3F b_cross_w_unit = bns::Vec3F::Normalize(b_cross_w);
-
-	bns::Vec3F u = b_cross_w_unit;
-
-	bns::Vec3F v = bns::Vec3F::Cross(w, u);
-
-	F32 half_w = width / 2.0f;
-	F32 half_h = height / 2.0f;
-
-	F32 _i = i + 0.5f;
-	F32 _j = j + 0.5f;
-
-	F32 fov = bns::Radians(cam.FOV);
-    
-	// https://computergraphics.stackexchange.com/questions/8479/how-to-calculate-ray
-	F32 half_view = bns::Tan(fov / 2.0f);
-
-	F32 aspect_ratio = static_cast<float>(width) / static_cast<float>(height);
-	
-	// TODO: fix for aspect ration
-	// in this assignemnt x is wider, therefore fix alpha, otherwise beta is to be fixed.
-
-	F32 alpha = half_view * aspect_ratio * ((_i - half_w) / half_w);
-	F32 beta = half_view *  ((half_h - _j) / half_h);
-
-	// ray = eye + (alpha_u + beta_v - w)/||(alpha_u + beta_v - w)||
-
-	bns::Vec3F dir = u * alpha + v * beta - w;
-
-	dir.Normalize();
-
-	bns::RayF ray(eye, dir);
-	return ray;
-}
-
-Intersection<bns::TriangleF> GetIntersection(bns::RayF ray, std::vector<bns::TriangleF> triangles)
-{
-	F32 min_dist = MAX_F32;
-	bns::TriangleF* ptr_hit_object = nullptr;
-	for (auto it = triangles.begin(); it != triangles.end(); ++it)
-	{
-		F32 t = ray.Intersects(*it);
-		if (t > 0 && t < min_dist)
-		{
-			min_dist = t;
-			ptr_hit_object = &*it;
-		}
-	}
-
-	return {
-		min_dist,
-		ptr_hit_object
-	};
-}
-
-bns::Vec3F FindColor(Intersection<bns::TriangleF> hit)
-{
-	// TODO: implement
-	if (hit.MinDist != MAX_F32) 
-	{
-		return bns::Vec3F(1.0f, 0.0f, 0.0f);
-	}
-	return bns::Vec3F(0, 0, 0);
-}
-
-std::vector<std::vector<bns::Vec3F>> RayTrace(Camera cam, std::vector<bns::TriangleF> triangles, int width, int height)
-{
-	std::vector<std::vector<bns::Vec3F>> result(height);
-
-	for (size_t j = 0; j < height; j++)
-	{
-		result[j] = std::vector<bns::Vec3F>(width);
-		for (size_t i = 0; i < width; i++)
-		{
-			bns::RayF ray = RayThroughPixel(cam, i,j, width, height);
-			Intersection<bns::TriangleF> hit = GetIntersection(ray, triangles);
-			result[j][i] = FindColor(hit);
-		}
-	}
-
-	return result;
-}
+U32 triangles_count = 0;
+U32 spheres_count = 0;
 
 int main()
 {
-	std::vector<Camera> cameras;
+	std::vector<bns::Camera> cameras;
 
 	I32 camera_width = 0;
 	I32 camera_height = 0;
 
-	bns::FileContents* file = bns::ReadAndCloseFile("scene1.test");
+	bns::FileContents* file = bns::ReadAndCloseFile("scene2.test");
 
 	char* ptr_to_size = strstr(file->Contents, "size");
 	if (ptr_to_size != 0)
@@ -186,7 +64,7 @@ int main()
 
 		upinit = bns::Vec3F::Normalize(upinit);
 
-		cameras.push_back({ eyeinit, center, upinit,fov });
+		cameras.push_back(bns::Camera(eyeinit, center, upinit,fov,camera_width, camera_height)); 
 
 		ptr_to_camera = strstr(&ptr_to_camera[1], "camera");
 	}
@@ -199,7 +77,7 @@ int main()
 
 
 	char* ptr_to_vertex = strstr(file->Contents, "vertex");
-	for (size_t i = 0; i < maxverts; i++)
+	for (I32 i = 0; i < maxverts; i++)
 	{
 		if (i > 0)
 		{
@@ -234,12 +112,73 @@ int main()
 		bns::Vec3F B = vertices[i_2];
 		bns::Vec3F C = vertices[i_3];
 
-		triangles.emplace_back(A, B, C);
+		shapes.emplace_back(new bns::TriangleShape());
+		bns::TriangleShape* ptr_triangle = static_cast<bns::TriangleShape*>(shapes.back());
+		ptr_triangle->Triangle = { A, B, C };
 
 		ptr_to_tri = strstr(&ptr_to_tri[1], "tri");
+		triangles_count++;
+	}
+
+	char* ptr_to_ambient = strstr(file->Contents, "ambient");
+	index = 0;
+	while (ptr_to_ambient)
+	{
+		I32 end_index = 0;
+		F32 r = 0;
+		F32 g = 0;
+		F32 b = 0;
+		bns::Vec3F vert;
+		ReadF32FromString(ptr_to_ambient, end_index, &end_index, &r);
+		ReadF32FromString(ptr_to_ambient, end_index, &end_index, &g);
+		ReadF32FromString(ptr_to_ambient, end_index, &end_index, &b);
+
+		ambient_colors.emplace_back(r, g, b);
+
+		ptr_to_ambient = strstr(&ptr_to_ambient[1], "ambient");
+	}
+
+	char* ptr_to_sphere = strstr(file->Contents, "sphere");
+	index = 0;
+	while (ptr_to_sphere)
+	{
+		I32 end_index = 0;
+		F32 x = 0;
+		F32 y = 0;
+		F32 z = 0;
+		F32 r = 0; // radius
+		bns::Vec3F vert;
+		ReadF32FromString(ptr_to_sphere, end_index, &end_index, &x);
+		ReadF32FromString(ptr_to_sphere, end_index, &end_index, &y);
+		ReadF32FromString(ptr_to_sphere, end_index, &end_index, &z);
+		ReadF32FromString(ptr_to_sphere, end_index, &end_index, &r);
+
+		shapes.emplace_back(new bns::SphereShape());
+		bns::SphereShape* ptr_sphere = static_cast<bns::SphereShape*>(shapes.back());
+		ptr_sphere->Sphere.Position = bns::Vec3F(x, y, z);
+		ptr_sphere->Sphere.Radius = r;
+
+		ptr_to_sphere = strstr(&ptr_to_sphere[1], "sphere");
+
+		spheres_count++;
+	}
+
+	I32 ambient_index = 0;
+	for (size_t i = 0; i < triangles_count; i+=2)
+	{
+		shapes[i]->Material.Color = ambient_colors[ambient_index];
+		shapes[i+1]->Material.Color = ambient_colors[ambient_index++];
+	}
+
+	for (size_t i = triangles_count; i < triangles_count + spheres_count; i++)
+	{
+		shapes[i]->Material.Color = ambient_colors[ambient_colors.size() - 1];
 	}
 
 	bns::FreeFileContents(file);
+
+
+#if IMAGE
 
 	I32 _index = 1;
 	for (auto it = cameras.begin(); it != cameras.end(); it++)
@@ -272,13 +211,25 @@ int main()
 
 		free(pixels);
 	}
-	
 
-	/*
+#else 
+
+
+	I32 _index = 1;
+
+	bns::Camera cam = cameras[1];
+	bns::ColorF** colors = bns::AllocateColors(cam);
+	bns::RayTrace(cam, shapes.data(), shapes.size(), colors);
+	void* pixels = bns::ColorsToABGR8888Pixels(cam, colors);
+	bns::FreeColors(cam, colors);
+
+	for (auto it = shapes.begin(); it != shapes.end(); ++it)
+	{
+		delete* it;
+	}
+
 	SDL_Renderer* renderer;
 	SDL_Window* window;
-
-	int rendererFlags, windowFlags;
 
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0)
 	{
@@ -304,13 +255,13 @@ int main()
 		exit(1);
 	}
 
-	SDL_Texture* texture =SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, camera_width, camera_height);
+	SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, camera_width, camera_height);
 	SDL_Rect rect;
 	rect.x = 0;
 	rect.y = 0;
 	rect.w = camera_width;
 	rect.h = camera_height;
-	SDL_UpdateTexture(texture,&rect,pixels,camera_width * 4);
+	SDL_UpdateTexture(texture, &rect, pixels, camera_width * 4);
 	SDL_RenderCopy(renderer, texture, &rect, &rect);
 	SDL_RenderPresent(renderer);
 
@@ -324,14 +275,13 @@ int main()
 		}
 	}
 
-	delete[] pixels;
+	bns::FreePixels(pixels);
 
 	SDL_DestroyTexture(texture);
 	SDL_DestroyRenderer(renderer);
 	SDL_Quit();
 
-	*/
-	
+#endif 
 
 	return 0;
 }

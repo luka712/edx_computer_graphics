@@ -10,7 +10,7 @@ namespace bns
 {
 	class Camera
 	{
-		Camera(bns::Vec3F eye, bns::Vec3F center, bns::Vec3F up)
+		Camera(bns::Vec3F eye, bns::Vec3F center, bns::Vec3F Up)
 		{
 
 		}

@@ -153,13 +153,17 @@
   <ItemGroup>
     <ClCompile Include="bones_char_string.cpp" />
     <ClCompile Include="bones_files.cpp" />
+    <ClCompile Include="bones_material.cpp" />
     <ClCompile Include="bones_math.cpp" />
+    <ClCompile Include="bones_raytracer.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bones_char_string.hpp" />
     <ClInclude Include="bones_files.hpp" />
+    <ClInclude Include="bones_material.hpp" />
     <ClInclude Include="bones_math.hpp" />
+    <ClInclude Include="bones_raytracer.hpp" />
     <ClInclude Include="bones_rendering_helpers.hpp" />
     <ClInclude Include="bones_types.hpp" />
     <ClInclude Include="loadbmp.h" />

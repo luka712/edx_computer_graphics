@@ -21,6 +21,13 @@ namespace bns
 #define PI 3.14159274101257324f
 #define HALF_PI (PI * 0.5f)
 #define TWO_PI (PI * 2.0f)
+#define EPSILON  0.00001f
+
+	inline F32 Pow(F32 x, F32 y = 2.0f)
+	{
+		F32 result = powf(x, y);
+		return result;
+	}
 
 	inline F32 Sqrt(F32 val)
 	{
@@ -707,6 +714,25 @@ namespace bns
 		}
 	};
 
+	/// <summary>
+	/// The color struct, with components R,G,B and A as F32
+	/// </summary>
+	struct ColorF
+	{
+		F32 R;
+		F32 G;
+		F32 B;
+		F32 A;
+
+		ColorF();
+		ColorF(F32 r, F32 g, F32 b);
+
+		/// <summary>
+		/// Return I32 where bytes are ABGR.
+		/// </summary>
+		I32 ToABGR8888();
+	};
+
 	struct Mat4x4F
 	{
 		// first column
@@ -794,7 +820,7 @@ namespace bns
 			return result;
 		}
 
-		inline static Mat4x4F LookAt(const Vec3F& eye, const Vec3F& center, const Vec3F& up)
+		inline static Mat4x4F LookAt(const Vec3F& eye, const Vec3F& center, const Vec3F& Up)
 		{
 			// Steps
 			// 1. Create a coordinate frame for the camera
@@ -809,7 +835,7 @@ namespace bns
 			Vec3F a = eye - center;
 			Vec3F w = Vec3F::Normalize(a);
 
-			Vec3F b = Vec3F::Normalize(up);
+			Vec3F b = Vec3F::Normalize(Up);
 
 			Vec3F b_cross_w = Vec3F::Cross(b, w);
 			Vec3F b_cross_w_unit = Vec3F::Normalize(b_cross_w);
@@ -911,37 +937,41 @@ namespace bns
 
 		}
 
+		TriangleF()
+		{
+			A = bns::Vec3F::Zero();
+			B = bns::Vec3F::Zero();
+			C = bns::Vec3F::Zero();
+		}
+
 		/// <summary>
 		/// Gets the vector that contains barycentric coordinates of a triangle from a point.
 		/// If all components are <= 1 point is on triangle if x + y + z == 1
 		/// </summary>
-		inline Vec3F BarycentricCoordinates(F32 x, F32 y, F32 z) const 
+		Vec3F BarycentricCoordinates(F32 x, F32 y, F32 z) const;
+
+		/// <summary>
+		/// Gets the vector that contains barycentric coordinates of a triangle from a point.
+		/// If all components are <= 1 point is on triangle if x + y + z == 1
+		/// </summary>
+		Vec3F BarycentricCoordinates(const Vec3F& point) const;
+	};
+
+	/// <summary>
+	/// The sphere.
+	/// </summary>
+	struct SphereF
+	{
+		bns::Vec3F Position;
+		F32 Radius;
+
+		SphereF(F32 x, F32 y, F32 z, F32 radius)
+			:Position(x, y, z), Radius(radius)
 		{
-			// https://www.youtube.com/watch?v=EZXz-uPyCyA
-			// https://gamedev.stackexchange.com/questions/23743/whats-the-most-efficient-way-to-find-barycentric-coordinates
-			Vec3F v0 = B - A;
-			Vec3F v1 = C - A;
-			Vec3F v2 = Vec3F(x, y, z) - A;
 
-			F32 d00 = v0.Dot(v0);
-			F32 d01 = v0.Dot(v1);
-			F32 d11 = v1.Dot(v1);
-			F32 d20 = v2.Dot(v0);
-			F32 d21 = v2.Dot(v1);
-
-			F32 denom = d00 * d11 - d01 * d01;
-
-			F32 b_y = (d11 * d20 - d01 * d21) / denom;
-			F32 b_z = (d00 * d21 - d01 * d20) / denom;
-			F32 b_x = 1.0f - b_y - b_z;
-
-			return Vec3F(b_x, b_y, b_z);
 		}
 
-		Vec3F BarycentricCoordinates(const Vec3F& point) const 
-		{
-			return BarycentricCoordinates(point.X, point.Y, point.Z);
-		}
+		SphereF();
 	};
 
 
@@ -956,59 +986,43 @@ namespace bns
 		RayF(Vec3F origin, Vec3F direction)
 			:Origin(origin), Direction(direction) {}
 
-		inline F32 Intersects(const TriangleF& triangle) const 
-		{
-			// approach: Ray-Plane intersection, then check if inside a triangle
-			// ref: https://learning.edx.org/course/course-v1:UCSanDiegoX+CSE167x+2T2018/block-v1:UCSanDiegoX+CSE167x+2T2018+type@sequential+block@L9/block-v1:UCSanDiegoX+CSE167x+2T2018+type@vertical+block@vertical_9380d3229d4a
-			// ref: https://www.youtube.com/watch?v=EZXz-uPyCyA
+		/// <summary>
+		/// Get the intersection distance between ray and triangle.
+		/// </summary>
+		/// <returns>F32, one can inspect if there is intersection by checking against MAX_F32, if result is MAX_F32 there is no intersection.</returns>
+		F32 IntersectionDistanceWithTriangle(const TriangleF& triangle) const;
 
-			// normal can be for any point, but let's use
-			// n = ((C-A)x(B-A)) / ||(C-A)x(B-A)||
-			Vec3F normal = Vec3F::Cross(triangle.C - triangle.A, triangle.B - triangle.A);
-			normal.Normalize();
 
-			// Plane equation, where . = dot product
-			// plane = P . n - A . n = 0
-			// Combine with ray equation, P_0 is ray position/origin, P_1_t is future ray position, direction with time t, so P1 is direction
-			// ray = P = P_0+ P_1_t
-			// (P_0 + P_1_t) . n = A . n
-			// So find t
-			// t = ((A . n) - (P_0 . n)) / (P_1 . n)
-
-			// first get (P_1 . n), if 0 there is no intersection,  since ray direction is orthogonal to the normal of direction
-			// which means ray direction line in the direction of a plane.
-			F32 direction_dot_n = Direction.Dot(normal);
-
-			if (Abs(direction_dot_n) < 0.00001)
-			{
-				return MAX_F32;
-			}
-
-			// so first part ((A . n) - (P_0 . n))
-			F32 t = triangle.A.Dot(normal) - (Origin.Dot(normal));
-
-			t /= direction_dot_n;
-
-			// Find if inside a triangle parametrically ( barycentric coordinates ). Useful for texture mapping as well
-			// Find alpha, beta , gamma where alpha is distance between intersection point and A
-			// beta is distance between intersection point and B, and gamma between intersection point and C
-			Vec3F intersection_point = Origin + Direction * t;
-	
-			Vec3F bc = triangle.BarycentricCoordinates(intersection_point);
-			// for barycentric coordinates point is on triangle if x+y+z == 1 , but account for floating point inprecision here
-			if (bc.X >= 0 && bc.X <= 1.0f 
-				&& bc.Y >= 0 && bc.Y <= 1.0f 
-				&& bc.Z >= 0 && bc.Z <= 1.0f) 
-			{
-				if (Abs((bc.X + bc.Y + bc.Z) - 1.0f) < 0.00001f)
-				{
-					return t;
-				}
-			}
-
-			return MAX_F32;
-		}
+		/// <summary>
+		/// Get the intersection distance between ray and sphere.
+		/// Ray can intersect sphere at two points t1 and t2. 
+		/// 
+		/// t says how far does ray have to go, to hit sphere in faction P0 + P1t where P0 is ray position and P1 is ray direction:
+		/// If t1 and t2 are 2 positive roots, ray is intersecting sphere. Smaller one is closer to ray.
+		/// If t1 and t2 are of same positive value, ray is tangent to a sphere.
+		/// If t1 and t2 are both negative (complex) values ray has missed the sphere.
+		/// If t1 or t2 is negative(complex), but other is positive value, ray is inside a sphere.
+		/// </summary>
+		void IntersectionDistanceWithSphere( const SphereF& sphere, F32* out_t1, F32* out_t2) const ;
 	};
+
+	/// <summary>
+	/// Get the intersection distance between ray and triangle.
+	/// </summary>
+	/// <returns>F32, one can inspect if there is intersection by checking against MAX_F32, if result is MAX_F32 there is no intersection.</returns>
+	F32 IntersectionDistanceRayTriangle(const RayF& ray, const TriangleF& triangle);
+
+	/// <summary>
+	/// Get the intersection distance between ray and sphere.
+	/// Ray can intersect sphere at two points t1 and t2. 
+	/// 
+	/// t says how far does ray have to go, to hit sphere in faction P0 + P1t where P0 is ray position and P1 is ray direction:
+	/// If t1 and t2 are 2 positive roots, ray is intersecting sphere. Smaller one is closer to ray.
+	/// If t1 and t2 are of same positive value, ray is tangent to a sphere.
+	/// If t1 and t2 are both negative (complex) values ray has missed the sphere.
+	/// If t1 or t2 is negative(complex), but other is positive value, ray is inside a sphere.
+	/// </summary>
+	void IntersectionDistanceRaySphere(const RayF& ray, const SphereF& sphere, F32* out_t1, F32* out_t2);
 
 
 

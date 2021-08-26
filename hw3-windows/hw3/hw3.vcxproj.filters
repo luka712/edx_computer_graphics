@@ -27,6 +27,12 @@
     <ClCompile Include="bones_char_string.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="bones_raytracer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="bones_material.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bones_math.hpp">
@@ -45,6 +51,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="loadbmp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="bones_material.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="bones_raytracer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

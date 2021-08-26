@@ -15,6 +15,7 @@
 // TODO: move to namespace
 
 typedef float F32;
+typedef uint8_t U8;
 typedef uint32_t U32;
 typedef int32_t I32;
 

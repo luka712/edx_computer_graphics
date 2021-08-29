@@ -9,6 +9,8 @@
 #include <cstdlib>
 #include <ostream>
 
+// NOTE: when working with intersection, if MAX_F32 is returned, there is no intersection.
+
 
 // NOTE: move all of this to library, so that it can be reused between projects.
 
@@ -21,7 +23,7 @@ namespace bns
 #define PI 3.14159274101257324f
 #define HALF_PI (PI * 0.5f)
 #define TWO_PI (PI * 2.0f)
-#define EPSILON  0.00001f
+#define EPSILON  0.0001f
 
 	inline F32 Pow(F32 x, F32 y = 2.0f)
 	{
@@ -186,6 +188,63 @@ namespace bns
 
 namespace bns
 {
+
+	struct Vec3F;
+	struct Vec4F;
+
+
+	/// <summary>
+	/// The structure for representing a simple point with F32 components.
+	/// </summary>
+	struct Point3F
+	{
+		F32 X;
+		F32 Y;
+		F32 Z;
+
+		Point3F(F32 x, F32 y, F32 z);
+		Point3F();
+
+		/// <summary>
+		/// Point to Vec3F.
+		/// </summary>
+		Vec3F ToVec3F() const;
+	};
+
+	/// <summary>
+	/// The structure for representing a simple point with F32 components.
+	/// </summary>
+	struct Point4F
+	{
+		F32 X;
+		F32 Y;
+		F32 Z;
+		F32 W;
+
+		Point4F(F32 x, F32 y, F32 z, F32 w);
+		Point4F();
+
+		/// <summary>
+		/// Cast point to vec 3.
+		/// </summary>
+		Vec3F ToVec3F() const;
+
+		/// <summary>
+		/// Cast point to vec 4.
+		/// </summary>
+		/// <returns></returns>
+		Vec4F ToVec4F() const;
+
+		/// <summary>
+		/// Cast point to point 3F.
+		/// </summary>
+		Point3F ToPoint3F() const;
+
+		friend Point4F operator+(const Point4F& a, const Point4F& b);
+		friend Point4F operator+(const Point4F& a, const Vec4F& b);
+		friend Point4F operator*(const Point4F& a, const Vec4F& b);
+	};
+
 	/// <summary>
 	/// The Vec2 struct, which has components X and Y as F32 
 	/// </summary>
@@ -212,13 +271,7 @@ namespace bns
 		/// <summary>
 		/// Get the component by index.
 		/// </summary>
-		inline F32 operator[](U32 index)
-		{
-			// Get pointer to x and increase by index, then dereference
-			F32 result = *(&this->X + index);
-
-			return result;
-		}
+		F32* operator[](U32 index);
 
 		/// <summary>
 		/// Set length of vector to 0.
@@ -501,6 +554,34 @@ namespace bns
 	};
 
 	/// <summary>
+	/// The Vec4 struct, which has components X,Y,Z and W as F32
+	/// </summary>
+	struct Vec4F
+	{
+		F32 X;
+		F32 Y;
+		F32 Z;
+		F32 W;
+
+		Vec4F(F32 x, F32 y, F32 z, F32 w);
+		Vec4F();
+
+		/// <summary>
+		/// Move vec4 to vec3. W is ignored.
+		/// </summary>
+		Vec3F ToVec3F() const ;
+
+		/// <summary>
+		/// The dot product of 2 vectors.
+		/// </summary>
+		F32 Dot(const bns::Vec4F& v) const;
+
+		friend bns::Vec4F operator-(const bns::Vec4F& a, const bns::Vec4F& b);
+
+		friend bns::Vec4F operator*(const bns::Vec4F& a, F32 scalar);
+	};
+
+	/// <summary>
 	/// The Vec3 struct, which has components X,Y and Z as F32 
 	/// </summary>
 	struct Vec3F
@@ -528,156 +609,99 @@ namespace bns
 		/// <summary>
 		/// Adds vectors component wise.
 		/// </summary>
-		inline Vec3F& operator+=(const Vec3F& rhs)
-		{
-			X += rhs.X;
-			Y += rhs.Y;
-			Z += rhs.Z;
-			return *this;
-		}
-
+		Vec3F& operator+=(const Vec3F& rhs);
 
 		/// <summary>
 		/// Adds vectors components wise.
 		/// </summary>
-		inline friend Vec3F operator +(Vec3F lhs, const Vec3F& rhs)
-		{
-			lhs += rhs;
-			return lhs;
-		}
+		friend Vec3F operator +(Vec3F lhs, const Vec3F& rhs);
 
 		/// <summary>
 		/// Subtracts vectors component wise.
 		/// </summary>
-		inline Vec3F& operator-=(const Vec3F& rhs)
-		{
-			X -= rhs.X;
-			Y -= rhs.Y;
-			Z -= rhs.Z;
-			return *this;
-		}
+		Vec3F& operator-=(const Vec3F& rhs);
 
 		/// <summary>
 		/// Subtracts vectors components wise.
 		/// </summary>
-		inline friend Vec3F operator -(Vec3F lhs, const Vec3F& rhs)
-		{
-			lhs -= rhs;
-			return lhs;
-		}
+		friend Vec3F operator -(Vec3F lhs, const Vec3F& rhs);
 
 		/// <summary>
 		/// Multiplication by scalar.
 		/// </summary>
-		inline Vec3F& operator *=(const F32 scalar)
-		{
-			X *= scalar;
-			Y *= scalar;
-			Z *= scalar;
-			return *this;
-		}
+		Vec3F& operator *=(const F32 scalar);
+
+		/// <summary>
+		/// Division by scalar.
+		/// </summary>
+		Vec3F& operator /=(const F32 scalar);
 
 		/// <summary>
 		/// Multiplication by scalar.
 		/// </summary>
-		inline friend Vec3F operator* (Vec3F lhs, const F32 scalar)
-		{
-			lhs *= scalar;
-			return lhs;
-		}
+		inline friend Vec3F operator* (Vec3F lhs, const F32 scalar);
 
 		/// <summary>
 		/// Multiplication by scalar.
 		/// </summary>
-		inline friend Vec3F operator* (F32 s, Vec3F v)
-		{
-			v.X *= s;
-			v.Y *= s;
-			v.Z *= s;
-			return v;
-		}
+		inline friend Vec3F operator* (F32 s, Vec3F v);
 
 		/// <summary>
 		/// Get length or magnitude of a vector.
 		/// </summary>
-		inline F32 Length() const
-		{
-			F32 result = X * X + Y * Y + Z * Z;
-			result = Sqrt(result);
-			return result;
-		}
+		F32 Length() const;
 
 		/// <summary>
 		/// Normalite a vector. Sets it's length or magnitude to 1.
 		/// </summary>
-		inline void Normalize()
-		{
-			F32 l = Length();
-			if (l > 0)
-			{
-				X /= l;
-				Y /= l;
-				Z /= l;
-			}
-			else
-			{
-				SetLengthToZero();
-			}
-		}
+		void Normalize();
 
 		/// <summary>
 		/// Set length of vector to 0.
 		/// </summary>
-		inline void SetLengthToZero()
-		{
-			X = 0;
-			Y = 0;
-			Z = 0;
-		}
+		void SetLengthToZero();
+
+		/// <summary>
+		/// Converts the vec3 to vec4.
+		/// W components is set to 0.
+		/// </summary>
+		bns::Vec4F ToVec4F(F32 w = 0.0f) const;
+
+		/// <summary>
+		/// Converts the vec3 to point4.
+		/// W component is set to 1.
+		/// </summary>
+		/// <returns></returns>
+		bns::Point4F ToPoint4F(F32 w = 1.0f) const;
 
 		/// <summary>
 		/// The cross product of two vectors is the third vector that is perpendicular to the two original vectors
 		/// </summary>
 		/// <returns>The cross product of two vectors.</returns>
-		inline static Vec3F Cross(const Vec3F& a, const Vec3F& b)
-		{
-			Vec3F result
-			{
-				a.Y * b.Z - b.Y * a.Z,
-				a.Z * b.X - b.Z * a.X,
-				a.X * b.Y - b.X * a.Y
-			};
-			return result;
-		}
+		static Vec3F Cross(const Vec3F& a, const Vec3F& b);
 
 		/// <summary>
 		/// Return the new normalized vector from in vector.
 		/// </summary>
 		/// <returns></returns>
-		inline static Vec3F Normalize(const Vec3F& in)
-		{
-			F32 l = in.Length();
-			Vec3F result =
-			{
-				in.X / l,
-				in.Y / l,
-				in.Z / l,
-			};
-			return result;
-		}
+		inline static Vec3F Normalize(const Vec3F& in);
+
+		/// <summary>
+		/// The dot product of two vectors.
+		/// </summary>
+		inline static F32 Dot(const bns::Vec3F& a, const bns::Vec3F& b);
+
+		/// <summary>
+		/// Reflect vector v around normal n.
+		/// </summary>
+		inline static Vec3F Reflect(const Vec3F& v, const Vec3F& n);
 
 		/// <summary>
 		/// Dot product of two vectors.
 		/// a.x * b.x + a.y * b.y + a.z * b.z
 		/// </summary>
-		inline F32 Dot(const Vec3F& other) const
-		{
-			F32 result = this->X * other.X +
-				this->Y * other.Y +
-				this->Z * other.Z;
-
-			return result;
-		}
+		inline F32 Dot(const Vec3F& other) const;
+	
 
 		/// <summary>
 		/// Retruns the vec3 with all zero components.
@@ -708,10 +732,7 @@ namespace bns
 		/// <summary>
 		/// Retruns the unit x vec3.
 		/// </summary>
-		inline static Vec3F UnitZ()
-		{
-			return { 0.0f, 0.0f, 1.0f };
-		}
+		static Vec3F UnitZ();
 	};
 
 	/// <summary>
@@ -726,165 +747,274 @@ namespace bns
 
 		ColorF();
 		ColorF(F32 r, F32 g, F32 b);
+		ColorF(F32 r, F32 g, F32 b, F32 a);
 
 		/// <summary>
 		/// Return I32 where bytes are ABGR.
 		/// </summary>
 		I32 ToABGR8888();
+
+		/// <summary>
+		/// Return I32 where bytes are ARGB.
+		/// </summary>
+		I32 ToARGB8888();
+
+		ColorF& operator+= (const ColorF & other);
+
+		static ColorF Black();
+
+		friend ColorF operator+(const ColorF& a, const ColorF& b);
+		friend ColorF operator*(const ColorF& a, const ColorF& b);
+		friend ColorF operator*(const ColorF& col, F32 scalar);
+		
 	};
 
+	/// <summary>
+	/// The 2x2 matrix of floats.
+	/// </summary>
+	struct Mat2x2F
+	{
+
+		// first col
+		F32 R0C0;
+		F32 R1C0;
+
+		// second col
+		F32 R0C1;
+		F32 R1C1;
+
+		Mat2x2F();
+
+		Mat2x2F(
+			F32 r0c0, F32 r0c1,
+			F32 r1c0, F32 r1c1
+		);
+
+		/// <summary>
+		/// Get the component by index.
+		/// </summary>
+		F32* operator[](U32 index);
+
+		/// <summary>
+		/// The determinant of matrix.
+		/// </summary>
+		F32 Determinant() const;
+	};
+
+	/// <summary>
+	/// The 3x3 matrix of floats.
+	/// </summary>
+	struct Mat3x3F
+	{
+		// first col
+		F32 R0C0;
+		F32 R1C0;
+		F32 R2C0;
+
+		// second col
+		F32 R0C1;
+		F32 R1C1;
+		F32 R2C1;
+
+		// third col
+		F32 R0C2;
+		F32 R1C2;
+		F32 R2C2;
+
+		Mat3x3F();
+
+		Mat3x3F(
+			F32 r0c0, F32 r0c1, F32 r0c2,
+			F32 r1c0, F32 r1c1, F32 r1c2,
+			F32 r2c0, F32 r2c1, F32 r2c2
+		);
+
+		/// <summary>
+		/// Get the component by index.
+		/// </summary>
+		F32* operator[](U32 index);
+
+		/// <summary>
+		/// Gets the value at index.
+		/// </summary>
+		F32 AtIndex(U32 row, U32 col) const;
+
+		/// <summary>
+		/// The determinant of matrix.
+		/// </summary>
+		F32 Determinant() const;
+
+		/// <summary>
+		/// The cofactor of a matrix.
+		/// </summary>
+		F32 Cofactor(U32 row, U32 col) const;
+
+		/// <summary>
+		/// The minor of a matrix.
+		/// </summary>
+		F32 Minor(U32 row, U32 col) const;
+
+		/// <summary>
+		/// Get the submatrix from matrix.
+		/// Max value for row and col is 2 as matrices are 0 indexed.
+		/// </summary>
+		bns::Mat2x2F SubMatrix(U32 row, U32 col) const;
+
+		/// <summary>
+		/// Get the identity matrix.
+		/// </summary>
+		static bns::Mat3x3F Identity();
+
+		/// <summary>
+		/// Multiplies scalar by a matrix.
+		/// </summary>
+		/// <returns></returns>
+		friend bns::Mat3x3F operator*(F32 scalar, const bns::Mat3x3F& m);
+
+		/// <summary>
+		/// Sums two matrices.
+		/// </summary>
+		friend bns::Mat3x3F operator+(const bns::Mat3x3F& a, const bns::Mat3x3F& b);
+	};
+
+	/// <summary>
+	/// Matrix 4x4 of F32 components.
+	/// </summary>
 	struct Mat4x4F
 	{
-		// first column
-		F32 r0c0;
-		F32 r1c0;
-		F32 r2c0;
-		F32 r3c0;
+		// first col
+		F32 R0C0;
+		F32 R1C0;
+		F32 R2C0;
+		F32 R3C0;
 
-		// second column
-		F32 r0c1;
-		F32 r1c1;
-		F32 r2c1;
-		F32 r3c1;
+		// second col
+		F32 R0C1;
+		F32 R1C1;
+		F32 R2C1;
+		F32 R3C1;
 
-		// third column
-		F32 r0c2;
-		F32 r1c2;
-		F32 r2c2;
-		F32 r3c2;
+		// third col
+		F32 R0C2;
+		F32 R1C2;
+		F32 R2C2;
+		F32 R3C2;
 
-		// fourth column
-		F32 r0c3;
-		F32 r1c3;
-		F32 r2c3;
-		F32 r3c3;
+		// fourth col
+		F32 R0C3;
+		F32 R1C3;
+		F32 R2C3;
+		F32 R3C3;
 
-		Mat4x4F() :Mat4x4F(
-			1.0f, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f
-		)
-		{
-
-		}
+		Mat4x4F();
 
 		Mat4x4F(
 			F32 r0c0, F32 r0c1, F32 r0c2, F32 r0c3,
 			F32 r1c0, F32 r1c1, F32 r1c2, F32 r1c3,
 			F32 r2c0, F32 r2c1, F32 r2c2, F32 r2c3,
 			F32 r3c0, F32 r3c1, F32 r3c2, F32 r3c3
-		) :
-			r0c0(r0c0), r0c1(r0c1), r0c2(r0c2), r0c3(r0c3),
-			r1c0(r1c0), r1c1(r1c1), r1c2(r1c2), r1c3(r1c3),
-			r2c0(r2c0), r2c1(r2c1), r2c2(r2c2), r2c3(r2c3),
-			r3c0(r3c0), r3c1(r3c1), r3c2(r3c2), r3c3(r3c3)
-		{
+		);
 
-		}
+		Mat4x4F(bns::Mat3x3F m);
 
-		inline friend Mat4x4F operator*(const Mat4x4F& a, const Mat4x4F& b)
-		{
-			F32 r0c0 = a.r0c0 * b.r0c0 + a.r0c1 * b.r1c0 + a.r0c2 * b.r2c0 + a.r0c3 * b.r3c0;
-			F32 r0c1 = a.r0c0 * b.r0c1 + a.r0c1 * b.r1c1 + a.r0c2 * b.r2c1 + a.r0c3 * b.r3c1;
-			F32 r0c2 = a.r0c0 * b.r0c2 + a.r0c1 * b.r1c2 + a.r0c2 * b.r2c2 + a.r0c3 * b.r3c2;
-			F32 r0c3 = a.r0c0 * b.r0c3 + a.r0c1 * b.r1c3 + a.r0c2 * b.r2c3 + a.r0c3 * b.r3c3;
+		/// <summary>
+		/// Get the component by index.
+		/// </summary>
+		F32* operator[](U32 index);
 
-			F32 r1c0 = a.r1c0 * b.r0c0 + a.r1c1 * b.r1c0 + a.r1c2 * b.r2c0 + a.r1c3 * b.r3c0;
-			F32 r1c1 = a.r1c0 * b.r0c1 + a.r1c1 * b.r1c1 + a.r1c2 * b.r2c1 + a.r1c3 * b.r3c1;
-			F32 r1c2 = a.r1c0 * b.r0c2 + a.r1c1 * b.r1c2 + a.r1c2 * b.r2c2 + a.r1c3 * b.r3c2;
-			F32 r1c3 = a.r1c0 * b.r0c3 + a.r1c1 * b.r1c3 + a.r1c2 * b.r2c3 + a.r1c3 * b.r3c3;
+		/// <summary>
+		/// Get value at matrix index.
+		/// </summary>
+		F32 AtIndex(U32 row, U32 col) const;
 
-			F32 r2c0 = a.r2c0 * b.r0c0 + a.r2c1 * b.r1c0 + a.r2c2 * b.r2c0 + a.r2c3 * b.r3c0;
-			F32 r2c1 = a.r2c0 * b.r0c1 + a.r2c1 * b.r1c1 + a.r2c2 * b.r2c1 + a.r2c3 * b.r3c1;
-			F32 r2c2 = a.r2c0 * b.r0c2 + a.r2c1 * b.r1c2 + a.r2c2 * b.r2c2 + a.r2c3 * b.r3c2;
-			F32 r2c3 = a.r2c0 * b.r0c3 + a.r2c1 * b.r1c3 + a.r2c2 * b.r2c3 + a.r2c3 * b.r3c3;
-
-			F32 r3c0 = a.r3c0 * b.r0c0 + a.r3c1 * b.r1c0 + a.r3c2 * b.r2c0 + a.r3c3 * b.r3c0;
-			F32 r3c1 = a.r3c0 * b.r0c1 + a.r3c1 * b.r1c1 + a.r3c2 * b.r2c1 + a.r3c3 * b.r3c1;
-			F32 r3c2 = a.r3c0 * b.r0c2 + a.r3c1 * b.r1c2 + a.r3c2 * b.r2c2 + a.r3c3 * b.r3c2;
-			F32 r3c3 = a.r3c0 * b.r0c3 + a.r3c1 * b.r1c3 + a.r3c2 * b.r2c3 + a.r3c3 * b.r3c3;
-
-			Mat4x4F result(
-				r0c0, r0c1, r0c2, r0c3,
-				r1c0, r1c1, r1c2, r1c3,
-				r2c0, r2c1, r2c2, r2c3,
-				r3c0, r3c1, r3c2, r3c3
-			);
-			return result;
-		}
-
-		inline static Mat4x4F Identity()
-		{
-			Mat4x4F result;
-			return result;
-		}
-
-		inline static Mat4x4F LookAt(const Vec3F& eye, const Vec3F& center, const Vec3F& Up)
-		{
-			// Steps
-			// 1. Create a coordinate frame for the camera
-			// 2. Define a rotation matrix
-			// 3. Apply appropriate translation for camera ( eye ) location
-
-			//      a          b x w
-			// w = ---    u = -------       v = w x u
-			//    ||a||     || b x w ||
-
-			// a = eye - center
-			Vec3F a = eye - center;
-			Vec3F w = Vec3F::Normalize(a);
-
-			Vec3F b = Vec3F::Normalize(Up);
-
-			Vec3F b_cross_w = Vec3F::Cross(b, w);
-			Vec3F b_cross_w_unit = Vec3F::Normalize(b_cross_w);
-
-			Vec3F u = b_cross_w_unit;
-
-			Vec3F v = Vec3F::Cross(w, u);
-
-			// Rotation matrix
-			//        | u_x u_y u_z |
-			// Ruvw = | v_x v_y v_z |
-			//        | w_x w_y w_z |
-
-			// T  = -eye
-			//     | R11 R12 R13 0 |  | 1 0 0 Tx |
-			// M = | R21 R22 R23 0 |  | 0 1 0 Ty |
-			//	   | R31 R32 R33 0 |  | 0 0 1 Tz |
-			//	   | 0   0   0   1 |  | 0 0 0 1  |
-
-			//			 | R3x3 R3x3T3x1 |
-			// lookat =  | O1x3    1     |
-
-			Mat4x4F rotation_matrix = Mat4x4F(
-				u.X, u.Y, u.Z, 0,
-				v.X, v.Y, v.Z, 0,
-				w.X, w.Y, w.Z, 0,
-				0, 0, 0, 1);
-
-			Mat4x4F translation_matrix = Mat4x4F(
-				1, 0, 0, -eye.X,
-				0, 1, 0, -eye.Y,
-				0, 0, 1, -eye.Z,
-				0, 0, 0, 1
-			);
+		/// <summary>
+		/// Multiply matrix by other.
+		/// </summary>
+		Mat4x4F operator*=(const Mat4x4F& b);
 
 
-			// You will change this return call
-			Mat4x4F result = rotation_matrix * translation_matrix;
-			return result;
-		}
+		/// <summary>
+		/// Multiply matrix by a vector.
+		/// </summary>
+		friend Vec4F operator*(const Mat4x4F& m, const Vec4F& v);
 
-		inline friend std::ostream& operator<<(std::ostream& os, const Mat4x4F& m)
-		{
-			os << "| " << m.r0c0 << " " << m.r0c1 << " " << m.r0c2 << " " << m.r0c3 << " |" << std::endl;
-			os << "| " << m.r1c0 << " " << m.r1c1 << " " << m.r1c2 << " " << m.r1c3 << " |" << std::endl;
-			os << "| " << m.r2c0 << " " << m.r2c1 << " " << m.r2c2 << " " << m.r2c3 << " |" << std::endl;
-			os << "| " << m.r3c0 << " " << m.r3c1 << " " << m.r3c2 << " " << m.r3c3 << " |" << std::endl;
-			return os;
-		}
+		/// <summary>
+		/// Multiply matrix by a point.
+		/// </summary>
+		friend Point4F operator*(const Mat4x4F& m, const Point4F& v);
+
+
+		/// <summary>
+		/// Multiply two matrices.
+		/// </summary>
+		friend Mat4x4F operator*(const Mat4x4F& a, const Mat4x4F& b);
+
+		/// <summary>
+		/// Get the submatrix from matrix, excluding row and column.
+		/// Row and col are 0 based.
+		/// </summary>
+		bns::Mat3x3F SubMatrix(U32 row, U32 col) const ;
+
+		/// <summary>
+		/// Gets the minor of matrix.
+		/// </summary>
+		F32 Minor(U32 row, U32 col) const;
+
+		/// <summary>
+		/// Get the cofactor of matrix.
+		/// </summary>
+		F32 Cofactor(U32 row, U32 col) const;
+
+		/// <summary>
+		/// The matrix determinant.
+		/// </summary>
+		F32 Determinant() const;
+
+		/// <summary>
+		/// Get the identity matrix.
+		/// </summary>
+		static Mat4x4F Identity();
+
+		/// <summary>
+		/// The inverse of matrix.
+		/// </summary>
+		static Mat4x4F Inverse(const bns::Mat4x4F& m);
+
+		/// <summary>
+		/// The transpose of a matrix.
+		/// </summary>
+		static Mat4x4F Transpose(bns::Mat4x4F m);
+
+		/// <summary>
+		/// Creates the translation matrix.
+		/// </summary>
+		static Mat4x4F Translate(F32 x, F32 y, F32 z);
+
+		/// <summary>
+		/// Creates the translation matrix.
+		/// </summary>
+		static Mat4x4F Translate(bns::Vec3F v);
+
+		/// <summary>
+		/// Creates the scale matrix.
+		/// </summary>
+		static Mat4x4F Scale(F32 x, F32 y, F32 z);
+
+		/// <summary>
+		/// Creates the scale matrix.
+		/// </summary>
+		static Mat4x4F Scale(bns::Vec3F v);
+
+		/// <summary>
+		/// Creates rotation matrix around axis from angle theta in radians.
+		/// </summary>
+		static Mat4x4F RotationMatrix(F32 theta_in_radians, bns::Vec3F axis);
+
+		/// <summary>
+		/// Create model view matrix from eye ( position ), loot_at ( center ) and up vector.
+		/// </summary>
+		/// <returns></returns>
+		static Mat4x4F LookAt(const Vec3F& eye, const Vec3F& look_at, const Vec3F& up);
 	};
 
 	/// <summary>
@@ -895,6 +1025,7 @@ namespace bns
 		I32 X;
 		I32 Y;
 	};
+
 
 	/// <summary>
 	/// The rectangle with F32 components.
@@ -955,7 +1086,14 @@ namespace bns
 		/// If all components are <= 1 point is on triangle if x + y + z == 1
 		/// </summary>
 		Vec3F BarycentricCoordinates(const Vec3F& point) const;
+
+		/// <summary>
+		/// Get the normal of triangle.
+		/// </summary>
+		Vec3F GetNormal() const;
 	};
+
+	Vec3F Normal(const TriangleF& tri);
 
 	/// <summary>
 	/// The sphere.
@@ -980,11 +1118,16 @@ namespace bns
 	/// </summary>
 	struct RayF
 	{
-		Vec3F Origin;
-		Vec3F Direction;
+		Point4F Origin;
+		Vec4F Direction;
 
-		RayF(Vec3F origin, Vec3F direction)
-			:Origin(origin), Direction(direction) {}
+		RayF(Point3F origin, Vec3F direction);
+		RayF(Point4F origin, Vec4F direction);
+		RayF(Point4F origin, Vec3F direction);
+
+		bns::RayF operator *=(const bns::Mat4x4F& m);
+
+		friend bns::RayF operator*(const bns::RayF& ray, const bns::Mat4x4F& m);
 
 		/// <summary>
 		/// Get the intersection distance between ray and triangle.
@@ -1000,10 +1143,10 @@ namespace bns
 		/// t says how far does ray have to go, to hit sphere in faction P0 + P1t where P0 is ray position and P1 is ray direction:
 		/// If t1 and t2 are 2 positive roots, ray is intersecting sphere. Smaller one is closer to ray.
 		/// If t1 and t2 are of same positive value, ray is tangent to a sphere.
-		/// If t1 and t2 are both negative (complex) values ray has missed the sphere.
+		/// If t1 and t2 are both MAX_F32 values ray has missed the sphere.
 		/// If t1 or t2 is negative(complex), but other is positive value, ray is inside a sphere.
 		/// </summary>
-		void IntersectionDistanceWithSphere( const SphereF& sphere, F32* out_t1, F32* out_t2) const ;
+		void IntersectionDistanceWithSphere(const SphereF& sphere, F32* out_t1, F32* out_t2) const;
 	};
 
 	/// <summary>
@@ -1019,12 +1162,25 @@ namespace bns
 	/// t says how far does ray have to go, to hit sphere in faction P0 + P1t where P0 is ray position and P1 is ray direction:
 	/// If t1 and t2 are 2 positive roots, ray is intersecting sphere. Smaller one is closer to ray.
 	/// If t1 and t2 are of same positive value, ray is tangent to a sphere.
-	/// If t1 and t2 are both negative (complex) values ray has missed the sphere.
+	/// If t1 and t2 are both MAX_F32 values ray has missed the sphere.
 	/// If t1 or t2 is negative(complex), but other is positive value, ray is inside a sphere.
 	/// </summary>
 	void IntersectionDistanceRaySphere(const RayF& ray, const SphereF& sphere, F32* out_t1, F32* out_t2);
 
+	/// <summary>
+	/// Create normalized vector, from vector being passed in.
+	/// </summary>
+	Vec3F Normalize(const Vec3F& v);
 
+	/// <summary>
+	/// The dot product of two vectors.
+	/// </summary>
+	F32 Dot(const Vec3F& a, const Vec3F& b);
 
+	std::ostream& operator<<(std::ostream& os, const Mat2x2F& m);
+
+	std::ostream& operator<<(std::ostream& os, const Mat3x3F& m);
+
+	std::ostream& operator<<(std::ostream& os, const Mat4x4F& m);
 }
 #endif 

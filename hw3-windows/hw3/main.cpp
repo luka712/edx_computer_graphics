@@ -11,219 +11,351 @@
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
 #include "bones_raytracer.hpp"
+#include <sstream>
+#include <stack>
+#include "include/FreeImage.h"
+#include "bones_lights.hpp"
 
 
-std::vector<bns::Vec3F> vertices;
-std::vector<bns::BaseShape*> shapes;
-std::vector<bns::ColorF> ambient_colors;
 
-U32 triangles_count = 0;
-U32 spheres_count = 0;
-
-int main()
+// TODO: move to raycaster 
+struct Scene
 {
-	std::vector<bns::Camera> cameras;
+	std::vector<bns::Camera> Cameras;
+	std::vector<bns::BaseShape*> Shapes;
+	std::vector<bns::BaseLight*> Lights;
+};
+
+void CreateSceneFromFile(const char* filename, Scene& scene)
+{
+
+	std::vector<bns::Vec3F> vertices;
 
 	I32 camera_width = 0;
 	I32 camera_height = 0;
 
-	bns::FileContents* file = bns::ReadAndCloseFile("scene2.test");
+	bns::FileContents* file = bns::ReadAndCloseFile(filename);
 
-	char* ptr_to_size = strstr(file->Contents, "size");
-	if (ptr_to_size != 0)
+	std::string line;
+	std::stringstream file_stream(file->Contents);
+
+
+	std::stack<bns::Mat4x4F> matrix_stack;
+	matrix_stack.push(bns::Mat4x4F::Identity());
+
+	bns::ColorF ambient_color = bns::ColorF(.2f, .2f, .2f);
+	bns::ColorF emission_color;
+	bns::ColorF diffuse_color;
+	bns::ColorF specular_color;
+	F32 shininess = 0.0f;
+
+	while (std::getline(file_stream, line))
 	{
-		I32 end_index = 0;
-		// 5 to skip size + space
-		ReadI32FromString(ptr_to_size, 4, &end_index, &camera_width);
-
-		ReadI32FromString(ptr_to_size, end_index, &end_index, &camera_height);
-	}
-
-	char* ptr_to_camera = strstr(file->Contents, "camera");
-	while (ptr_to_camera)
-	{
-		I32 end_index = 0;
-
-		bns::Vec3F eyeinit;
-		ReadF32FromString(ptr_to_camera, end_index, &end_index, &eyeinit.X);
-		ReadF32FromString(ptr_to_camera, end_index, &end_index, &eyeinit.Y);
-		ReadF32FromString(ptr_to_camera, end_index, &end_index, &eyeinit.Z);
-
-		bns::Vec3F center;
-		ReadF32FromString(ptr_to_camera, end_index, &end_index, &center.X);
-		ReadF32FromString(ptr_to_camera, end_index, &end_index, &center.Y);
-		ReadF32FromString(ptr_to_camera, end_index, &end_index, &center.Z);
-
-		bns::Vec3F upinit;
-		ReadF32FromString(ptr_to_camera, end_index, &end_index, &upinit.X);
-		ReadF32FromString(ptr_to_camera, end_index, &end_index, &upinit.Y);
-		ReadF32FromString(ptr_to_camera, end_index, &end_index, &upinit.Z);
-
-		F32 fov;
-		ReadF32FromString(ptr_to_camera, end_index, &end_index, &fov);
-
-		upinit = bns::Vec3F::Normalize(upinit);
-
-		cameras.push_back(bns::Camera(eyeinit, center, upinit,fov,camera_width, camera_height)); 
-
-		ptr_to_camera = strstr(&ptr_to_camera[1], "camera");
-	}
-
-	char* ptr_to_maxverts = strstr(file->Contents, "maxverts");
-	I32 maxverts = 0;
-	ReadI32FromString(ptr_to_maxverts, 0, &maxverts);
-
-	vertices = std::vector<bns::Vec3F>();
-
-
-	char* ptr_to_vertex = strstr(file->Contents, "vertex");
-	for (I32 i = 0; i < maxverts; i++)
-	{
-		if (i > 0)
+		if (line.rfind("end", 0) == 0)
 		{
-			if (ptr_to_vertex != NULL)
-			{
-				ptr_to_vertex = strstr(&ptr_to_vertex[1], "vertex");
-			}
+			break;
 		}
+		if (line.rfind("size", 0) == 0)
+		{
+			I32 end_index = 0;
+
+			ReadI32FromString(line.c_str(), end_index, &end_index, &camera_width);
+			ReadI32FromString(line.c_str(), end_index, &end_index, &camera_height);
+		}
+		else if (line.rfind("camera", 0) == 0)
+		{
+			I32 end_index = 0;
+			const char* ptr_to_camera = line.c_str();
+
+			bns::Vec3F eyeinit;
+			ReadF32FromString(ptr_to_camera, end_index, &end_index, &eyeinit.X);
+			ReadF32FromString(ptr_to_camera, end_index, &end_index, &eyeinit.Y);
+			ReadF32FromString(ptr_to_camera, end_index, &end_index, &eyeinit.Z);
+
+			bns::Vec3F center;
+			ReadF32FromString(ptr_to_camera, end_index, &end_index, &center.X);
+			ReadF32FromString(ptr_to_camera, end_index, &end_index, &center.Y);
+			ReadF32FromString(ptr_to_camera, end_index, &end_index, &center.Z);
+
+			bns::Vec3F upinit;
+			ReadF32FromString(ptr_to_camera, end_index, &end_index, &upinit.X);
+			ReadF32FromString(ptr_to_camera, end_index, &end_index, &upinit.Y);
+			ReadF32FromString(ptr_to_camera, end_index, &end_index, &upinit.Z);
+
+			F32 fov;
+			ReadF32FromString(ptr_to_camera, end_index, &end_index, &fov);
+
+			upinit = bns::Vec3F::Normalize(upinit);
+
+			scene.Cameras.push_back(bns::Camera(eyeinit, center, upinit, fov, camera_width, camera_height));
+		}
+		else if (line.rfind("vertex", 0) == 0)
+		{
+			const char* ptr_to_vertex = line.c_str();
+
+			I32 end_index = 0;
+			bns::Vec3F vert;
+			ReadF32FromString(ptr_to_vertex, end_index, &end_index, &vert.X);
+			ReadF32FromString(ptr_to_vertex, end_index, &end_index, &vert.Y);
+			ReadF32FromString(ptr_to_vertex, end_index, &end_index, &vert.Z);
+			vertices.push_back(vert);
+
+		}
+		else if (line.rfind("pushTransform", 0) == 0)
+		{
+			matrix_stack.push(bns::Mat4x4F::Identity());
+		}
+		else if (line.rfind("popTransform", 0) == 0)
+		{
+			matrix_stack.pop();
+		}
+		else if (line.rfind("translate", 0) == 0)
+		{
+			const char* ptr = line.c_str();
+
+			I32 end_index = 0;
+			bns::Vec3F v;
+			ReadF32FromString(ptr, end_index, &end_index, &v.X);
+			ReadF32FromString(ptr, end_index, &end_index, &v.Y);
+			ReadF32FromString(ptr, end_index, &end_index, &v.Z);
+
+			bns::Mat4x4F m = matrix_stack.top();
+			matrix_stack.pop();
+			m *= bns::Mat4x4F::Translate(v);
+			matrix_stack.push(m);
+		}
+		else if (line.rfind("scale", 0) == 0)
+		{
+			const char* ptr = line.c_str();
+
+			I32 end_index = 0;
+			bns::Vec3F v;
+			ReadF32FromString(ptr, end_index, &end_index, &v.X);
+			ReadF32FromString(ptr, end_index, &end_index, &v.Y);
+			ReadF32FromString(ptr, end_index, &end_index, &v.Z);
+
+			bns::Mat4x4F m = matrix_stack.top();
+			matrix_stack.pop();
+			m *= bns::Mat4x4F::Scale(v);
+			matrix_stack.push(m);
+		}
+		else if (line.rfind("rotate", 0) == 0)
+		{
+			const char* ptr = line.c_str();
+
+			I32 end_index = 0;
+			bns::Vec3F v;
+			F32 theta;
+			ReadF32FromString(ptr, end_index, &end_index, &v.X);
+			ReadF32FromString(ptr, end_index, &end_index, &v.Y);
+			ReadF32FromString(ptr, end_index, &end_index, &v.Z);
+			ReadF32FromString(ptr, end_index, &end_index, &theta);
+
+			bns::Mat4x4F m = matrix_stack.top();
+			matrix_stack.pop();
+			m = bns::Mat4x4F::RotationMatrix(bns::Radians(theta), v) * m;
+			matrix_stack.push(m);
+		}
+		else if (line.rfind("ambient", 0) == 0)
+		{
+			const char* ptr = line.c_str();
+			I32 end_index = 0;
+
+			ReadF32FromString(ptr, end_index, &end_index, &ambient_color.R);
+			ReadF32FromString(ptr, end_index, &end_index, &ambient_color.G);
+			ReadF32FromString(ptr, end_index, &end_index, &ambient_color.B);
+
+		}
+		else if (line.rfind("emission", 0) == 0)
+		{
+			const char* ptr = line.c_str();
+			I32 end_index = 0;
+
+			ReadF32FromString(ptr, end_index, &end_index, &emission_color.R);
+			ReadF32FromString(ptr, end_index, &end_index, &emission_color.G);
+			ReadF32FromString(ptr, end_index, &end_index, &emission_color.B);
+		}
+		else if (line.rfind("diffuse", 0) == 0)
+		{
+			const char* ptr = line.c_str();
+			I32 end_index = 0;
+
+			ReadF32FromString(ptr, end_index, &end_index, &diffuse_color.R);
+			ReadF32FromString(ptr, end_index, &end_index, &diffuse_color.G);
+			ReadF32FromString(ptr, end_index, &end_index, &diffuse_color.B);
+		}
+		else if (line.rfind("specular", 0) == 0)
+		{
+			const char* ptr = line.c_str();
+			I32 end_index = 0;
+
+			ReadF32FromString(ptr, end_index, &end_index, &specular_color.R);
+			ReadF32FromString(ptr, end_index, &end_index, &specular_color.G);
+			ReadF32FromString(ptr, end_index, &end_index, &specular_color.B);
+		}
+		else if (line.rfind("shininess", 0) == 0)
+		{
+		const char* ptr = line.c_str();
 		I32 end_index = 0;
-		bns::Vec3F vert;
-		ReadF32FromString(ptr_to_vertex, end_index, &end_index, &vert.X);
-		ReadF32FromString(ptr_to_vertex, end_index, &end_index, &vert.Y);
-		ReadF32FromString(ptr_to_vertex, end_index, &end_index, &vert.Z);
-		vertices.push_back(vert);
+
+		ReadF32FromString(ptr, end_index, &end_index, &shininess);
+		}
+		else if (line.rfind("tri", 0) == 0)
+		{
+			const char* ptr = line.c_str();
+
+			I32 end_index = 0;
+			I32 i_1 = 0;
+			I32 i_2 = 0;
+			I32 i_3 = 0;
+			bns::Vec3F vert;
+			ReadI32FromString(ptr, end_index, &end_index, &i_1);
+			ReadI32FromString(ptr, end_index, &end_index, &i_2);
+			ReadI32FromString(ptr, end_index, &end_index, &i_3);
+
+			bns::Vec3F A = vertices[i_1];
+			bns::Vec3F B = vertices[i_2];
+			bns::Vec3F C = vertices[i_3];
+
+			scene.Shapes.emplace_back(new bns::TriangleShape());
+			bns::TriangleShape* ptr_triangle = static_cast<bns::TriangleShape*>(scene.Shapes.back());
+			ptr_triangle->Triangle = { A, B, C };
+			ptr_triangle->SetTransform(matrix_stack.top());
+			ptr_triangle->Material.Ambient = ambient_color;
+			ptr_triangle->Material.Emission = emission_color;
+			ptr_triangle->Material.Diffuse = diffuse_color;
+			ptr_triangle->Material.Specular = specular_color;
+			ptr_triangle->Material.Shininess = shininess;
+		}
+		else if (line.rfind("sphere", 0) == 0)
+		{
+			const char* ptr = line.c_str();
+			I32 end_index = 0;
+			F32 x = 0;
+			F32 y = 0;
+			F32 z = 0;
+			F32 r = 0; // radius
+			bns::Vec3F vert;
+			ReadF32FromString(ptr, end_index, &end_index, &x);
+			ReadF32FromString(ptr, end_index, &end_index, &y);
+			ReadF32FromString(ptr, end_index, &end_index, &z);
+			ReadF32FromString(ptr, end_index, &end_index, &r);
+
+			scene.Shapes.emplace_back(new bns::SphereShape());
+			bns::SphereShape* ptr_sphere = static_cast<bns::SphereShape*>(scene.Shapes.back());
+			ptr_sphere->Sphere.Position = bns::Vec3F(x, y, z);
+			ptr_sphere->Sphere.Radius = r;
+			ptr_sphere->SetTransform(matrix_stack.top());
+			ptr_sphere->Material.Ambient = ambient_color;
+			ptr_sphere->Material.Diffuse = diffuse_color;
+			ptr_sphere->Material.Emission = emission_color;
+			ptr_sphere->Material.Specular = specular_color;
+			ptr_sphere->Material.Shininess = shininess;
+		}
+		else if (line.rfind("point", 0) == 0)
+		{
+			const char* ptr = line.c_str();
+			I32 end_index = 0;
+
+
+			scene.Lights.emplace_back(new bns::PointLight());
+			bns::PointLight& light = *(static_cast<bns::PointLight*>(scene.Lights.back()));
+			ReadF32FromString(ptr, end_index, &end_index, &light.Position.X);
+			ReadF32FromString(ptr, end_index, &end_index, &light.Position.Y);
+			ReadF32FromString(ptr, end_index, &end_index, &light.Position.Z);
+			ReadF32FromString(ptr, end_index, &end_index, &light.Color.R);
+			ReadF32FromString(ptr, end_index, &end_index, &light.Color.G);
+			ReadF32FromString(ptr, end_index, &end_index, &light.Color.B);
+		}
 	}
 
-
-	char* ptr_to_tri = strstr(file->Contents, "tri");
-	I32 index = 0;
-	while (ptr_to_tri)
-	{
-		I32 end_index = 0;
-		I32 i_1 = 0;
-		I32 i_2 = 0;
-		I32 i_3 = 0;
-		bns::Vec3F vert;
-		ReadI32FromString(ptr_to_tri, end_index, &end_index, &i_1);
-		ReadI32FromString(ptr_to_tri, end_index, &end_index, &i_2);
-		ReadI32FromString(ptr_to_tri, end_index, &end_index, &i_3);
-
-		bns::Vec3F A = vertices[i_1];
-		bns::Vec3F B = vertices[i_2];
-		bns::Vec3F C = vertices[i_3];
-
-		shapes.emplace_back(new bns::TriangleShape());
-		bns::TriangleShape* ptr_triangle = static_cast<bns::TriangleShape*>(shapes.back());
-		ptr_triangle->Triangle = { A, B, C };
-
-		ptr_to_tri = strstr(&ptr_to_tri[1], "tri");
-		triangles_count++;
-	}
-
-	char* ptr_to_ambient = strstr(file->Contents, "ambient");
-	index = 0;
-	while (ptr_to_ambient)
-	{
-		I32 end_index = 0;
-		F32 r = 0;
-		F32 g = 0;
-		F32 b = 0;
-		bns::Vec3F vert;
-		ReadF32FromString(ptr_to_ambient, end_index, &end_index, &r);
-		ReadF32FromString(ptr_to_ambient, end_index, &end_index, &g);
-		ReadF32FromString(ptr_to_ambient, end_index, &end_index, &b);
-
-		ambient_colors.emplace_back(r, g, b);
-
-		ptr_to_ambient = strstr(&ptr_to_ambient[1], "ambient");
-	}
-
-	char* ptr_to_sphere = strstr(file->Contents, "sphere");
-	index = 0;
-	while (ptr_to_sphere)
-	{
-		I32 end_index = 0;
-		F32 x = 0;
-		F32 y = 0;
-		F32 z = 0;
-		F32 r = 0; // radius
-		bns::Vec3F vert;
-		ReadF32FromString(ptr_to_sphere, end_index, &end_index, &x);
-		ReadF32FromString(ptr_to_sphere, end_index, &end_index, &y);
-		ReadF32FromString(ptr_to_sphere, end_index, &end_index, &z);
-		ReadF32FromString(ptr_to_sphere, end_index, &end_index, &r);
-
-		shapes.emplace_back(new bns::SphereShape());
-		bns::SphereShape* ptr_sphere = static_cast<bns::SphereShape*>(shapes.back());
-		ptr_sphere->Sphere.Position = bns::Vec3F(x, y, z);
-		ptr_sphere->Sphere.Radius = r;
-
-		ptr_to_sphere = strstr(&ptr_to_sphere[1], "sphere");
-
-		spheres_count++;
-	}
-
-	I32 ambient_index = 0;
-	for (size_t i = 0; i < triangles_count; i+=2)
-	{
-		shapes[i]->Material.Color = ambient_colors[ambient_index];
-		shapes[i+1]->Material.Color = ambient_colors[ambient_index++];
-	}
-
-	for (size_t i = triangles_count; i < triangles_count + spheres_count; i++)
-	{
-		shapes[i]->Material.Color = ambient_colors[ambient_colors.size() - 1];
-	}
 
 	bns::FreeFileContents(file);
+}
 
+void saveScreenshot(std::string fname, void* pixels, I32 w, I32 h)
+{
+	FIBITMAP* img = FreeImage_ConvertFromRawBits((BYTE*)pixels, w, h, w * 4, 32, 0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF);
+
+	std::cout << "Saving screenshot: " << fname << "\n";
+
+	FreeImage_Save(FIF_PNG, img, fname.c_str(), 0);
+}
+
+
+
+#define IMAGE 1
+
+int main()
+{
 
 #if IMAGE
 
-	I32 _index = 1;
-	for (auto it = cameras.begin(); it != cameras.end(); it++)
+	FreeImage_Initialise(0);
+
+	const char* source[7] = {
+		"scene4-ambient.test",
+		"scene4-diffuse.test",
+		"scene4-emission.test",
+		"scene4-specular.test",
+		"scene5.test",
+		"scene6.test",
+		"scene7.test"
+	};
+	const char* target[7] = {
+		"scene4-ambient.png",
+		"scene4-diffuse.png",
+		"scene4-emission.png",
+		"scene4-specular.png",
+		"scene5.png",
+		"scene6.png",
+		"scene7.png"
+	};
+
+	for (size_t i = 4; i < 6; i++)
 	{
-		auto result = RayTrace(*it, triangles, camera_width, camera_height);
-		unsigned char* pixels = (unsigned char*)malloc(camera_width * camera_height * 4);
+		Scene renderer_scene;
+		CreateSceneFromFile(source[i], renderer_scene);
 
-		I32 pixel_index = 0;
-		for (I32 y = 0; y < result.size(); y++)
-		{
-			for (I32 x = 0; x < result[y].size(); x++)
-			{
-				bns::Vec3F color = result[y][x];
+		I32 _index = 1;
+		bns::Camera cam = renderer_scene.Cameras[0];
 
-				unsigned char r = static_cast<unsigned char>(color.X * 255);
-				unsigned char g = static_cast<unsigned char>(color.Y * 255);
-				unsigned char b = static_cast<unsigned char>(color.Z * 255);
 
-				pixels[pixel_index] = r;
-				pixels[pixel_index + 1] = g;
-				pixels[pixel_index + 2] = b;
-				pixels[pixel_index + 3] = 255;
+		bns::ColorF** colors = bns::AllocateColors(cam);
+		bns::RayTrace(cam,
+			renderer_scene.Shapes.data(), renderer_scene.Shapes.size(),
+			renderer_scene.Lights.data(), renderer_scene.Lights.size(),
+			colors);
+		void* pixels = bns::ColorsToARGB8888Pixels(cam, colors);
 
-				pixel_index += 4;
-			}
-		}
 
-		unsigned int err = loadbmp_encode_file(_index + "_camera_test.bmp", pixels, camera_width, camera_height, LOADBMP_RGBA);
+		saveScreenshot(std::string(target[i]), pixels, cam.ScreenWidth, cam.ScreenHeight);
 		_index++;
 
-		free(pixels);
-	}
+
+		bns::FreeColors(cam, colors);
+		bns::FreePixels(pixels);
+}
+
+	FreeImage_DeInitialise();
 
 #else 
 
-
 	I32 _index = 1;
 
-	bns::Camera cam = cameras[1];
+	Scene renderer_scene;
+	CreateSceneFromFile("scene4-specular.test", renderer_scene);
+
+	bns::Camera cam = renderer_scene.Cameras[0];
+
 	bns::ColorF** colors = bns::AllocateColors(cam);
-	bns::RayTrace(cam, shapes.data(), shapes.size(), colors);
+	bns::RayTrace(cam,
+		renderer_scene.Shapes.data(), renderer_scene.Shapes.size(),
+		renderer_scene.Lights.data(), renderer_scene.Lights.size(), colors);
 	void* pixels = bns::ColorsToABGR8888Pixels(cam, colors);
 	bns::FreeColors(cam, colors);
 
-	for (auto it = shapes.begin(); it != shapes.end(); ++it)
+	for (auto it = renderer_scene.Shapes.begin(); it != renderer_scene.Shapes.end(); ++it)
 	{
 		delete* it;
 	}
@@ -237,11 +369,11 @@ int main()
 		exit(1);
 	}
 
-	window = SDL_CreateWindow("Shooter 01", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, camera_width, camera_height, 0);
+	window = SDL_CreateWindow("Shooter 01", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, cam.ScreenWidth, cam.ScreenHeight, 0);
 
 	if (!window)
 	{
-		printf("Failed to open %d x %d window: %s\n", camera_width, camera_height, SDL_GetError());
+		printf("Failed to open %d x %d window: %s\n", cam.ScreenWidth, cam.ScreenHeight, SDL_GetError());
 		exit(1);
 	}
 
@@ -255,13 +387,13 @@ int main()
 		exit(1);
 	}
 
-	SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, camera_width, camera_height);
+	SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, cam.ScreenWidth, cam.ScreenHeight);
 	SDL_Rect rect;
 	rect.x = 0;
 	rect.y = 0;
-	rect.w = camera_width;
-	rect.h = camera_height;
-	SDL_UpdateTexture(texture, &rect, pixels, camera_width * 4);
+	rect.w = cam.ScreenWidth;
+	rect.h = cam.ScreenHeight;
+	SDL_UpdateTexture(texture, &rect, pixels, cam.ScreenWidth * 4);
 	SDL_RenderCopy(renderer, texture, &rect, &rect);
 	SDL_RenderPresent(renderer);
 

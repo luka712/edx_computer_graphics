@@ -23,10 +23,12 @@ bns::FileContents* bns::ReadAndCloseFile(const char* filename)
 		result->Length = ftell(fp);
 		fseek(fp, 0, SEEK_SET);
 
-		result->Contents = (char*)malloc(result->Length);
+		result->Contents = (char*)malloc(result->Length + 2);
 		if (result->Contents != 0)
 		{
-			fread(result->Contents, 1, result->Length, fp);
+			fread(result->Contents, 1, result->Length + 2, fp);
+			result->Contents[result->Length-1] = '\n';
+			result->Contents[result->Length] = '\0';
 		}
 
 		fclose(fp);

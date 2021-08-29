@@ -10,8 +10,11 @@ namespace bns
 {
 	struct Material
 	{
-		bns::ColorF Color;
-
+		bns::ColorF Ambient;
+		bns::ColorF Emission;
+		bns::ColorF Diffuse;
+		bns::ColorF Specular;
+		F32 Shininess;
 	};
 }
 

@@ -28,7 +28,6 @@ struct Scene
 
 void CreateSceneFromFile(const char* filename, Scene& scene)
 {
-
 	std::vector<bns::Vec3F> vertices;
 
 	I32 camera_width = 0;
@@ -48,6 +47,9 @@ void CreateSceneFromFile(const char* filename, Scene& scene)
 	bns::ColorF diffuse_color;
 	bns::ColorF specular_color;
 	F32 shininess = 0.0f;
+	F32 attenuation_constant = 1.0f;
+	F32 attenuation_linear = 0.0f;
+	F32 attenuation_quadratic = 0.0f;
 
 	while (std::getline(file_stream, line))
 	{
@@ -103,7 +105,16 @@ void CreateSceneFromFile(const char* filename, Scene& scene)
 		}
 		else if (line.rfind("pushTransform", 0) == 0)
 		{
-			matrix_stack.push(bns::Mat4x4F::Identity());
+			if (matrix_stack.empty()) 
+			{
+				matrix_stack.push(bns::Mat4x4F::Identity());
+			}
+			else
+			{
+				bns::Mat4x4F m = matrix_stack.top();
+				m =  bns::Mat4x4F::Identity() * m;
+				matrix_stack.push(m);
+			}
 		}
 		else if (line.rfind("popTransform", 0) == 0)
 		{
@@ -121,7 +132,7 @@ void CreateSceneFromFile(const char* filename, Scene& scene)
 
 			bns::Mat4x4F m = matrix_stack.top();
 			matrix_stack.pop();
-			m *= bns::Mat4x4F::Translate(v);
+			m = m * bns::Mat4x4F::Translate(v);
 			matrix_stack.push(m);
 		}
 		else if (line.rfind("scale", 0) == 0)
@@ -136,7 +147,7 @@ void CreateSceneFromFile(const char* filename, Scene& scene)
 
 			bns::Mat4x4F m = matrix_stack.top();
 			matrix_stack.pop();
-			m *= bns::Mat4x4F::Scale(v);
+			m = m * bns::Mat4x4F::Scale(v);
 			matrix_stack.push(m);
 		}
 		else if (line.rfind("rotate", 0) == 0)
@@ -153,7 +164,7 @@ void CreateSceneFromFile(const char* filename, Scene& scene)
 
 			bns::Mat4x4F m = matrix_stack.top();
 			matrix_stack.pop();
-			m = bns::Mat4x4F::RotationMatrix(bns::Radians(theta), v) * m;
+			m = m * bns::Mat4x4F::RotationMatrix(bns::Radians(theta), v);
 			matrix_stack.push(m);
 		}
 		else if (line.rfind("ambient", 0) == 0)
@@ -195,10 +206,21 @@ void CreateSceneFromFile(const char* filename, Scene& scene)
 		}
 		else if (line.rfind("shininess", 0) == 0)
 		{
-		const char* ptr = line.c_str();
-		I32 end_index = 0;
+			const char* ptr = line.c_str();
+			I32 end_index = 0;
 
-		ReadF32FromString(ptr, end_index, &end_index, &shininess);
+			ReadF32FromString(ptr, end_index, &end_index, &shininess);
+		}
+		else if (line.rfind("attenuation", 0) == 0)
+		{
+			const char* ptr = line.c_str();
+			I32 end_index = 0;
+
+			ReadF32FromString(ptr, end_index, &end_index, &attenuation_constant);
+			ReadF32FromString(ptr, end_index, &end_index, &attenuation_linear);
+			ReadF32FromString(ptr, end_index, &end_index, &attenuation_quadratic);
+
+
 		}
 		else if (line.rfind("tri", 0) == 0)
 		{
@@ -251,18 +273,36 @@ void CreateSceneFromFile(const char* filename, Scene& scene)
 			ptr_sphere->Material.Emission = emission_color;
 			ptr_sphere->Material.Specular = specular_color;
 			ptr_sphere->Material.Shininess = shininess;
+			ptr_sphere->Material.RefractiveIndex = 1.5f;
 		}
 		else if (line.rfind("point", 0) == 0)
 		{
 			const char* ptr = line.c_str();
 			I32 end_index = 0;
 
-
 			scene.Lights.emplace_back(new bns::PointLight());
 			bns::PointLight& light = *(static_cast<bns::PointLight*>(scene.Lights.back()));
 			ReadF32FromString(ptr, end_index, &end_index, &light.Position.X);
 			ReadF32FromString(ptr, end_index, &end_index, &light.Position.Y);
 			ReadF32FromString(ptr, end_index, &end_index, &light.Position.Z);
+			ReadF32FromString(ptr, end_index, &end_index, &light.Color.R);
+			ReadF32FromString(ptr, end_index, &end_index, &light.Color.G);
+			ReadF32FromString(ptr, end_index, &end_index, &light.Color.B);
+
+			light.Attenuation.Constant = attenuation_constant;
+			light.Attenuation.Linear = attenuation_linear;
+			light.Attenuation.Quadratic = attenuation_quadratic;
+		}
+		else if (line.rfind("directional", 0) == 0)
+		{
+			const char* ptr = line.c_str();
+			I32 end_index = 0;
+
+			scene.Lights.emplace_back(new bns::DirectionalLight());
+			bns::DirectionalLight& light = *(static_cast<bns::DirectionalLight*>(scene.Lights.back()));
+			ReadF32FromString(ptr, end_index, &end_index, &light.Direction.X);
+			ReadF32FromString(ptr, end_index, &end_index, &light.Direction.Y);
+			ReadF32FromString(ptr, end_index, &end_index, &light.Direction.Z);
 			ReadF32FromString(ptr, end_index, &end_index, &light.Color.R);
 			ReadF32FromString(ptr, end_index, &end_index, &light.Color.G);
 			ReadF32FromString(ptr, end_index, &end_index, &light.Color.B);
@@ -284,35 +324,34 @@ void saveScreenshot(std::string fname, void* pixels, I32 w, I32 h)
 
 
 
-#define IMAGE 1
+#define IMAGE 0
 
 int main()
 {
-
 #if IMAGE
 
 	FreeImage_Initialise(0);
 
-	const char* source[7] = {
-		"scene4-ambient.test",
-		"scene4-diffuse.test",
-		"scene4-emission.test",
-		"scene4-specular.test",
+	const char* source[2] = {
+		//"scene4-ambient.test",
+		//"scene4-diffuse.test",
+		//"scene4-emission.test",
+		//"scene4-specular.test",
 		"scene5.test",
 		"scene6.test",
-		"scene7.test"
+		//"scene7.test"
 	};
-	const char* target[7] = {
-		"scene4-ambient.png",
-		"scene4-diffuse.png",
-		"scene4-emission.png",
-		"scene4-specular.png",
+	const char* target[2] = {
+		//"scene4-ambient.png",
+		//"scene4-diffuse.png",
+		//"scene4-emission.png",
+		//"scene4-specular.png",
 		"scene5.png",
 		"scene6.png",
-		"scene7.png"
+		//"scene7.png"
 	};
 
-	for (size_t i = 4; i < 6; i++)
+	for (size_t i = 0; i < 1; i++)
 	{
 		Scene renderer_scene;
 		CreateSceneFromFile(source[i], renderer_scene);
@@ -322,7 +361,7 @@ int main()
 
 
 		bns::ColorF** colors = bns::AllocateColors(cam);
-		bns::RayTrace(cam,
+		bns::ThreadedRayTrace(cam,
 			renderer_scene.Shapes.data(), renderer_scene.Shapes.size(),
 			renderer_scene.Lights.data(), renderer_scene.Lights.size(),
 			colors);
@@ -335,7 +374,7 @@ int main()
 
 		bns::FreeColors(cam, colors);
 		bns::FreePixels(pixels);
-}
+	}
 
 	FreeImage_DeInitialise();
 
@@ -344,12 +383,12 @@ int main()
 	I32 _index = 1;
 
 	Scene renderer_scene;
-	CreateSceneFromFile("scene4-specular.test", renderer_scene);
+	CreateSceneFromFile("scene6.test", renderer_scene);
 
 	bns::Camera cam = renderer_scene.Cameras[0];
 
 	bns::ColorF** colors = bns::AllocateColors(cam);
-	bns::RayTrace(cam,
+	bns::ThreadedRayTrace(cam,
 		renderer_scene.Shapes.data(), renderer_scene.Shapes.size(),
 		renderer_scene.Lights.data(), renderer_scene.Lights.size(), colors);
 	void* pixels = bns::ColorsToABGR8888Pixels(cam, colors);

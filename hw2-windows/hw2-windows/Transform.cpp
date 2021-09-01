@@ -45,7 +45,10 @@ mat3 Transform::rotate(const float degrees, const vec3& axis)
 	float z = axis.z / l;
 
 	mat3 a = cos(theta) * mat3(1);
-	mat3 b = (1.0f - cos(theta)) * glm::transpose(mat3(x * x, x * y, x * z, x * y, y * y, y * z, x * z, y * z, z * z));
+	mat3 b = (1.0f - cos(theta)) * glm::transpose(mat3(
+		x * x, x * y, x * z,
+		x * y, y * y, y * z, 
+		x * z, y * z, z * z));
 	mat3 c = sin(theta) * glm::transpose(mat3(0, -z, y, z, 0, -x, -y, x, 0));
 
 	// You will change this return call

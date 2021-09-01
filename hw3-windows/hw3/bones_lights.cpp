@@ -14,4 +14,7 @@ bns::DirectionalLight::DirectionalLight()
 bns::PointLight::PointLight()
 :BaseLight(LightType::Point)
 {
+	Attenuation.Constant = 1.0f;
+	Attenuation.Linear = 0.0f;
+	Attenuation.Quadratic = 0.0f;
 }

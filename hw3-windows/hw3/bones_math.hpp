@@ -639,7 +639,7 @@ namespace bns
 		/// <summary>
 		/// Multiplication by scalar.
 		/// </summary>
-		inline friend Vec3F operator* (Vec3F lhs, const F32 scalar);
+		inline friend Vec3F operator * (Vec3F lhs, const F32 scalar);
 
 		/// <summary>
 		/// Multiplication by scalar.
@@ -1173,9 +1173,19 @@ namespace bns
 	Vec3F Normalize(const Vec3F& v);
 
 	/// <summary>
+	/// Reflect the vector over normal.
+	/// </summary>
+	Vec3F Reflect(const bns::Vec3F& v, const bns::Vec3F& n);
+
+	/// <summary>
 	/// The dot product of two vectors.
 	/// </summary>
 	F32 Dot(const Vec3F& a, const Vec3F& b);
+
+	/// <summary>
+	/// The distance between two vectors.
+	/// </summary>
+	F32 Distance(const Vec3F& a, const Vec3F& b);
 
 	std::ostream& operator<<(std::ostream& os, const Mat2x2F& m);
 

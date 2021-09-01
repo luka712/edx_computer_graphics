@@ -66,8 +66,8 @@ bns::Vec3F bns::operator-(Vec3F lhs, const Vec3F& rhs)
 
 bns::Vec3F bns::operator*(Vec3F lhs, const F32 scalar)
 {
-		lhs *= scalar;
-		return lhs;
+	lhs *= scalar;
+	return lhs;
 }
 
 bns::Vec3F bns::operator*(F32 s, Vec3F v)
@@ -295,6 +295,13 @@ F32 bns::Dot(const Vec3F& a, const Vec3F& b)
 	return result;
 }
 
+F32 bns::Distance(const Vec3F& a, const Vec3F& b)
+{
+	F32 dx = a.X - b.X;
+	F32 dy = a.Y - b.Y;
+	return Sqrt(dx * dx + dy * dy);
+}
+
 bns::RayF bns::RayF::operator*=(const bns::Mat4x4F& m)
 {
 	// important, notice to ToVec3, ToVec4. Point has for W by default 1, while vec has 3 when casting.
@@ -392,7 +399,7 @@ bns::ColorF& bns::ColorF::operator+=(const ColorF& other)
 
 bns::ColorF bns::ColorF::Black()
 {
-	return ColorF(0.0f,0.0f,0.0f,0.0f);
+	return ColorF(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
 bns::ColorF bns::operator+(const bns::ColorF& a, const bns::ColorF& b)
@@ -877,7 +884,9 @@ bns::Mat4x4F bns::Mat4x4F::RotationMatrix(F32 theta_in_radians, bns::Vec3F axis)
 
 	// You will change this return call
 	bns::Mat3x3F sum = a + b + c;
+	std::cout << sum << std::endl;
 	bns::Mat4x4F result(sum);
+	std::cout << result << std::endl;
 	return result;
 }
 
@@ -1019,6 +1028,11 @@ F32 bns::Vec4F::Dot(const bns::Vec4F& v) const
 		+ this->Z * v.Z
 		+ this->W + v.W;
 	return result;
+}
+
+bns::Vec3F bns::Reflect(const Vec3F& v, const Vec3F& n)
+{
+	return bns::Vec3F::Reflect(v, n);
 }
 
 bns::Vec3F bns::Vec4F::ToVec3F() const

@@ -15,6 +15,7 @@ namespace bns
 		bns::ColorF Diffuse;
 		bns::ColorF Specular;
 		F32 Shininess;
+		F32 RefractiveIndex;
 	};
 }
 

@@ -51,12 +51,23 @@ namespace bns
 		F32 T;
 		// Intersected shape
 		const BaseShape* Shape;
+
+		bns::Point4F RayOrigin;
+		bns::Vec3F RayDirection;
+
 		// Point of intersection
 		bns::Point4F LocalPoint;
 		bns::Point4F WorldPoint;
+		
 		bns::Vec3F Eye;
 		bns::Vec3F LocalNormal;
 		bns::Vec3F WorldNormal;
+		bns::Vec3F ReflectedVector;
+
+		// refractive index of the material that ray is passing from ( being exited from )
+		F32 N1;
+		// refractive index of the material that ray is passing to ( being entered to )
+		F32 N2;
 	};
 
 	struct BaseShape
@@ -136,7 +147,8 @@ namespace bns
 	{
 		U32 CurrentIntersectionCount;
 		// TODO: optimize this number, or maybe dynamic array ? 
-		Intersection IntersectionsArray[50];
+		// TODO: Move these to heap!!!!
+		Intersection IntersectionsArray[10000];
 
 		Intersections();
 
@@ -154,11 +166,6 @@ namespace bns
 	bns::RayF RayThroughPixel(Camera cam, I32 screen_pixel_x, I32 screen_pixel_y);
 
 	/// <summary>
-	/// Find color at intersection.
-	/// </summary>
-	bns::ColorF ColorAt(Intersection hit);
-
-	/// <summary>
 	/// Get the closest intersection between ray and triangles.
 	/// 
 	/// NOTE: shapes is pointer to array of BaseShape pointers. Read as array<BaseShape*>
@@ -168,6 +175,21 @@ namespace bns
 	/// Allocate colors for raytracer.
 	/// </summary>
 	bns::ColorF** AllocateColors(const bns::Camera& camera);
+
+	/// <summary>
+	/// Get the color from ray.
+	/// </summary>
+	bns::ColorF ColorAt(const bns::RayF& ray,
+		bns::BaseShape** shapes, U32 count_of_shapes,
+		bns::BaseLight** lights, U32 count_of_lights,
+		I32 remaining);
+
+	/// <summary>
+	/// Trace the colors for shapes, uses multiple threads to work.
+	/// 
+	/// NOTE: shapes is pointer to array of BaseShape pointers. Read as array<BaseShape*>
+	/// </summary>
+	void ThreadedRayTrace(const Camera& cam, bns::BaseShape** shapes, U32 count_of_shapes, bns::BaseLight** lights, U32 count_of_lights, bns::ColorF** colors_to_fill);
 
 	/// <summary>
 	/// Trace the colors for shapes.
@@ -186,8 +208,30 @@ namespace bns
 	/// </summary>
 	bns::ColorF BlinnPhongReflectionModel( const Computations& comp, bns::BaseShape** shapes, U32 count_of_shapes, BaseLight** lights, U32 count_of_lights);
 
-	bns::ColorF ReflectedColor(const Computations& comp, I32 remaining = 5);
+	/// <summary>
+	/// Get the reflected color.
+	/// 
+	/// This function created the reflection ray and calls ColorAt for it, in other words gets it's lighting, shadow and further calls reflected rays for it.
+	/// </summary>
+	bns::ColorF ReflectedColor(const Computations& comp, 
+		bns::BaseShape** shapes, U32 count_of_shapes,
+		bns::BaseLight** lights, U32 count_of_lights,
+		I32 remaining);
 
+	/// <summary>
+	/// Get the refracted color.
+	/// 
+	/// This function created the refraction ray and calls ColorAt for it, in other words gets it's lighting, shadow and further calls refracted rays for it.
+	/// </summary>
+	bns::ColorF RefractedColor(const Computations& comp,
+		bns::BaseShape** shapes, U32 count_of_shapes,
+		bns::BaseLight** lights, U32 count_of_lights,
+		I32 remaining);
+
+	/// <summary>
+	/// Returns boolean expressions which says if point in space is directly blocked by other object from light source.
+	/// Determines if object is in shadow or not.
+	/// </summary>
 	bool IsShadowed(const Computations& comp, const BaseLight& light, bns::BaseShape** shapes, U32 count_of_shapes);
 
 	/// <summary>

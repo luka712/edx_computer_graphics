@@ -14,6 +14,13 @@ namespace bns
 		Point 
 	};
 
+	struct Attenuation
+	{
+		F32 Constant;
+		F32 Linear;
+		F32 Quadratic;
+	};
+
 	struct BaseLight
 	{
 		bns::ColorF Color;
@@ -31,6 +38,7 @@ namespace bns
 	struct PointLight final : BaseLight
 	{
 		bns::Vec3F Position;
+		Attenuation Attenuation;
 		PointLight();
 	};
 }

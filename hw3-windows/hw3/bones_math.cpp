@@ -41,7 +41,7 @@ bns::Vec4F bns::operator-(const bns::Vec4F& a, const bns::Vec4F& b)
 	);
 }
 
-bns::Vec4F bns::operator*(const bns::Vec4F& a, F32 scalar)
+bns::Vec4F bns::operator*(const bns::Vec4F& a, bns::F32 scalar)
 {
 	return bns::Vec4F(
 		a.X * scalar,
@@ -64,13 +64,13 @@ bns::Vec3F bns::operator-(Vec3F lhs, const Vec3F& rhs)
 	return lhs;
 }
 
-bns::Vec3F bns::operator*(Vec3F lhs, const F32 scalar)
+bns::Vec3F bns::operator*(Vec3F lhs, const bns::F32 scalar)
 {
 	lhs *= scalar;
 	return lhs;
 }
 
-bns::Vec3F bns::operator*(F32 s, Vec3F v)
+bns::Vec3F bns::operator*(bns::F32 s, Vec3F v)
 {
 	v.X *= s;
 	v.Y *= s;
@@ -78,7 +78,7 @@ bns::Vec3F bns::operator*(F32 s, Vec3F v)
 	return v;
 }
 
-bns::Mat3x3F bns::operator*(F32 scalar, const bns::Mat3x3F& m)
+bns::Mat3x3F bns::operator*(bns::F32 scalar, const bns::Mat3x3F& m)
 {
 	bns::Mat3x3F result(
 		m.R0C0 * scalar, m.R0C1 * scalar, m.R0C2 * scalar,
@@ -130,25 +130,25 @@ bns::Point4F bns::operator*(const Mat4x4F& m, const Point4F& p)
 
 bns::Mat4x4F bns::operator*(const Mat4x4F& a, const Mat4x4F& b)
 {
-	F32 R0C0 = a.R0C0 * b.R0C0 + a.R0C1 * b.R1C0 + a.R0C2 * b.R2C0 + a.R0C3 * b.R3C0;
-	F32 R0C1 = a.R0C0 * b.R0C1 + a.R0C1 * b.R1C1 + a.R0C2 * b.R2C1 + a.R0C3 * b.R3C1;
-	F32 R0C2 = a.R0C0 * b.R0C2 + a.R0C1 * b.R1C2 + a.R0C2 * b.R2C2 + a.R0C3 * b.R3C2;
-	F32 R0C3 = a.R0C0 * b.R0C3 + a.R0C1 * b.R1C3 + a.R0C2 * b.R2C3 + a.R0C3 * b.R3C3;
+	bns::F32 R0C0 = a.R0C0 * b.R0C0 + a.R0C1 * b.R1C0 + a.R0C2 * b.R2C0 + a.R0C3 * b.R3C0;
+	bns::F32 R0C1 = a.R0C0 * b.R0C1 + a.R0C1 * b.R1C1 + a.R0C2 * b.R2C1 + a.R0C3 * b.R3C1;
+	bns::F32 R0C2 = a.R0C0 * b.R0C2 + a.R0C1 * b.R1C2 + a.R0C2 * b.R2C2 + a.R0C3 * b.R3C2;
+	bns::F32 R0C3 = a.R0C0 * b.R0C3 + a.R0C1 * b.R1C3 + a.R0C2 * b.R2C3 + a.R0C3 * b.R3C3;
 
-	F32 R1C0 = a.R1C0 * b.R0C0 + a.R1C1 * b.R1C0 + a.R1C2 * b.R2C0 + a.R1C3 * b.R3C0;
-	F32 R1C1 = a.R1C0 * b.R0C1 + a.R1C1 * b.R1C1 + a.R1C2 * b.R2C1 + a.R1C3 * b.R3C1;
-	F32 R1C2 = a.R1C0 * b.R0C2 + a.R1C1 * b.R1C2 + a.R1C2 * b.R2C2 + a.R1C3 * b.R3C2;
-	F32 R1C3 = a.R1C0 * b.R0C3 + a.R1C1 * b.R1C3 + a.R1C2 * b.R2C3 + a.R1C3 * b.R3C3;
+	bns::F32 R1C0 = a.R1C0 * b.R0C0 + a.R1C1 * b.R1C0 + a.R1C2 * b.R2C0 + a.R1C3 * b.R3C0;
+	bns::F32 R1C1 = a.R1C0 * b.R0C1 + a.R1C1 * b.R1C1 + a.R1C2 * b.R2C1 + a.R1C3 * b.R3C1;
+	bns::F32 R1C2 = a.R1C0 * b.R0C2 + a.R1C1 * b.R1C2 + a.R1C2 * b.R2C2 + a.R1C3 * b.R3C2;
+	bns::F32 R1C3 = a.R1C0 * b.R0C3 + a.R1C1 * b.R1C3 + a.R1C2 * b.R2C3 + a.R1C3 * b.R3C3;
 
-	F32 R2C0 = a.R2C0 * b.R0C0 + a.R2C1 * b.R1C0 + a.R2C2 * b.R2C0 + a.R2C3 * b.R3C0;
-	F32 R2C1 = a.R2C0 * b.R0C1 + a.R2C1 * b.R1C1 + a.R2C2 * b.R2C1 + a.R2C3 * b.R3C1;
-	F32 R2C2 = a.R2C0 * b.R0C2 + a.R2C1 * b.R1C2 + a.R2C2 * b.R2C2 + a.R2C3 * b.R3C2;
-	F32 R2C3 = a.R2C0 * b.R0C3 + a.R2C1 * b.R1C3 + a.R2C2 * b.R2C3 + a.R2C3 * b.R3C3;
+	bns::F32 R2C0 = a.R2C0 * b.R0C0 + a.R2C1 * b.R1C0 + a.R2C2 * b.R2C0 + a.R2C3 * b.R3C0;
+	bns::F32 R2C1 = a.R2C0 * b.R0C1 + a.R2C1 * b.R1C1 + a.R2C2 * b.R2C1 + a.R2C3 * b.R3C1;
+	bns::F32 R2C2 = a.R2C0 * b.R0C2 + a.R2C1 * b.R1C2 + a.R2C2 * b.R2C2 + a.R2C3 * b.R3C2;
+	bns::F32 R2C3 = a.R2C0 * b.R0C3 + a.R2C1 * b.R1C3 + a.R2C2 * b.R2C3 + a.R2C3 * b.R3C3;
 
-	F32 R3C0 = a.R3C0 * b.R0C0 + a.R3C1 * b.R1C0 + a.R3C2 * b.R2C0 + a.R3C3 * b.R3C0;
-	F32 R3C1 = a.R3C0 * b.R0C1 + a.R3C1 * b.R1C1 + a.R3C2 * b.R2C1 + a.R3C3 * b.R3C1;
-	F32 R3C2 = a.R3C0 * b.R0C2 + a.R3C1 * b.R1C2 + a.R3C2 * b.R2C2 + a.R3C3 * b.R3C2;
-	F32 R3C3 = a.R3C0 * b.R0C3 + a.R3C1 * b.R1C3 + a.R3C2 * b.R2C3 + a.R3C3 * b.R3C3;
+	bns::F32 R3C0 = a.R3C0 * b.R0C0 + a.R3C1 * b.R1C0 + a.R3C2 * b.R2C0 + a.R3C3 * b.R3C0;
+	bns::F32 R3C1 = a.R3C0 * b.R0C1 + a.R3C1 * b.R1C1 + a.R3C2 * b.R2C1 + a.R3C3 * b.R3C1;
+	bns::F32 R3C2 = a.R3C0 * b.R0C2 + a.R3C1 * b.R1C2 + a.R3C2 * b.R2C2 + a.R3C3 * b.R3C2;
+	bns::F32 R3C3 = a.R3C0 * b.R0C3 + a.R3C1 * b.R1C3 + a.R3C2 * b.R2C3 + a.R3C3 * b.R3C3;
 
 	Mat4x4F result(
 		R0C0, R0C1, R0C2, R0C3,
@@ -192,7 +192,7 @@ bns::Vec3F bns::Normal(const TriangleF& tri)
 	return result;
 }
 
-F32 bns::IntersectionDistanceRayTriangle(const bns::RayF& ray, const bns::TriangleF& triangle)
+bns::F32 bns::IntersectionDistanceRayTriangle(const bns::RayF& ray, const bns::TriangleF& triangle)
 {
 	bns::Vec3F origin = ray.Origin.ToVec3F();
 	bns::Vec3F direction = ray.Direction.ToVec3F();
@@ -217,15 +217,15 @@ F32 bns::IntersectionDistanceRayTriangle(const bns::RayF& ray, const bns::Triang
 
 	// first get (P_1 . n), if 0 there is no intersection,  since ray direction is orthogonal to the normal of direction
 	// which means ray direction line in the direction of a plane.
-	F32 direction_dot_n = direction.Dot(normal);
+	bns::F32 direction_dot_n = direction.Dot(normal);
 
-	if (Abs(direction_dot_n) < 0.00001)
+	if (Abs(direction_dot_n) < 0.00001f)
 	{
-		return MAX_F32;
+		return bns::MAX_F32;
 	}
 
 	// so first part ((A . n) - (P_0 . n))
-	F32 t = triangle.A.Dot(normal) - (origin.Dot(normal));
+	bns::F32 t = triangle.A.Dot(normal) - (origin.Dot(normal));
 	t /= direction_dot_n;
 
 	// Find if inside a triangle parametrically ( barycentric coordinates ). Useful for texture mapping as well
@@ -245,10 +245,10 @@ F32 bns::IntersectionDistanceRayTriangle(const bns::RayF& ray, const bns::Triang
 		}
 	}
 
-	return MAX_F32;
+	return bns::MAX_F32;
 }
 
-void bns::IntersectionDistanceRaySphere(const RayF& ray, const SphereF& sphere, F32* out_t1, F32* out_t2)
+void bns::IntersectionDistanceRaySphere(const RayF& ray, const SphereF& sphere, bns::F32* out_t1, bns::F32* out_t2)
 {
 	// ray = P0 + P1
 	// sphere = (P-C)(P-C) - r^2 
@@ -263,23 +263,25 @@ void bns::IntersectionDistanceRaySphere(const RayF& ray, const SphereF& sphere, 
 
 	bns::Vec3F direction = ray.Direction.ToVec3F();
 
-	F32 a = direction.Dot(direction);
-	F32 b = 2 * direction.Dot(sphere_to_ray);
-	F32 c = sphere_to_ray.Dot(sphere_to_ray) - Pow(sphere.Radius);
+	bns::F32 a = direction.Dot(direction);
+	bns::F32 b = 2 * direction.Dot(sphere_to_ray);
+	bns::F32 c = sphere_to_ray.Dot(sphere_to_ray) - Pow(sphere.Radius);
 
-	F32 discriminant = Pow(b) - 4 * a * c;
+	bns::F32 discriminant = Pow(b) - 4 * a * c;
 
 	// discriminant is less then 0, no solution
 	if (discriminant < 0)
 	{
 		// no solution, ray has missed the sphere completly.
-		*out_t1 = MAX_F32;
-		*out_t2 = MAX_F32;
+		*out_t1 = bns::INFINITY_F32;
+		*out_t2 = bns::INFINITY_F32;
 		return;
 	}
 
-	*out_t1 = (-b - Sqrt(discriminant)) / (2.0f * a);
-	*out_t2 = (-b + Sqrt(discriminant)) / (2.0f * a);
+
+	F32 sqrt_discriminant = Sqrt(discriminant);
+	*out_t1 = (-b - sqrt_discriminant) / (2.0f * a);
+	*out_t2 = (-b + sqrt_discriminant) / (2.0f * a);
 }
 
 bns::Vec3F bns::Normalize(const bns::Vec3F& v)
@@ -289,16 +291,16 @@ bns::Vec3F bns::Normalize(const bns::Vec3F& v)
 	return result;
 }
 
-F32 bns::Dot(const Vec3F& a, const Vec3F& b)
+bns::F32 bns::Dot(const Vec3F& a, const Vec3F& b)
 {
-	F32 result = a.X * b.X + a.Y * b.Y + a.Z * b.Z;
+	bns::F32 result = a.X * b.X + a.Y * b.Y + a.Z * b.Z;
 	return result;
 }
 
-F32 bns::Distance(const Vec3F& a, const Vec3F& b)
+bns::F32 bns::Distance(const Vec3F& a, const Vec3F& b)
 {
-	F32 dx = a.X - b.X;
-	F32 dy = a.Y - b.Y;
+	bns::F32 dx = a.X - b.X;
+	bns::F32 dy = a.Y - b.Y;
 	return Sqrt(dx * dx + dy * dy);
 }
 
@@ -320,12 +322,12 @@ bns::RayF bns::operator*(const bns::RayF& ray, const bns::Mat4x4F& m)
 	return bns::RayF(org, dir);
 }
 
-F32 bns::RayF::IntersectionDistanceWithTriangle(const TriangleF& triangle) const
+bns::F32 bns::RayF::IntersectionDistanceWithTriangle(const TriangleF& triangle) const
 {
 	return bns::IntersectionDistanceRayTriangle(*this, triangle);
 }
 
-void bns::RayF::IntersectionDistanceWithSphere(const SphereF& sphere, F32* out_t1, F32* out_t2) const
+void bns::RayF::IntersectionDistanceWithSphere(const SphereF& sphere, bns::F32* out_t1, bns::F32* out_t2) const
 {
 	bns::IntersectionDistanceRaySphere(*this, sphere, out_t1, out_t2);
 }
@@ -350,18 +352,24 @@ bns::ColorF::ColorF()
 {
 }
 
-bns::ColorF::ColorF(F32 r, F32 g, F32 b)
+bns::ColorF::ColorF(bns::F32 r, bns::F32 g, bns::F32 b)
 	: R(r), G(g), B(b), A(1.0f)
 {
 }
 
-bns::ColorF::ColorF(F32 r, F32 g, F32 b, F32 a)
+bns::ColorF::ColorF(bns::F32 r, bns::F32 g, bns::F32 b, bns::F32 a)
 	: R(r), G(g), B(b), A(a)
 {
 }
 
-I32 bns::ColorF::ToABGR8888()
+bns::I32 bns::ColorF::ToABGR8888()
 {
+	// prevent overflow
+	R = Min(R, 1.0f);
+	G = Min(G, 1.0f);
+	B = Min(B, 1.0f);
+	A = Min(A, 1.0f);
+
 	U8 r = static_cast<U8>(R * 255);
 	U8 g = static_cast<U8>(G * 255);
 	U8 b = static_cast<U8>(B * 255);
@@ -374,8 +382,14 @@ I32 bns::ColorF::ToABGR8888()
 	return result;
 }
 
-I32 bns::ColorF::ToARGB8888()
+bns::I32 bns::ColorF::ToARGB8888()
 {
+	// prevent overflow
+	R = Min(R, 1.0f);
+	G = Min(G, 1.0f);
+	B = Min(B, 1.0f);
+	A = Min(A, 1.0f);
+
 	U8 r = static_cast<U8>(R * 255);
 	U8 g = static_cast<U8>(G * 255);
 	U8 b = static_cast<U8>(B * 255);
@@ -426,7 +440,7 @@ bns::ColorF bns::operator*(const bns::ColorF& a, const bns::ColorF& b)
 	return result;
 }
 
-bns::ColorF bns::operator*(const ColorF& col, F32 scalar)
+bns::ColorF bns::operator*(const ColorF& col, bns::F32 scalar)
 {
 	return ColorF(
 		col.R * scalar,
@@ -436,7 +450,7 @@ bns::ColorF bns::operator*(const ColorF& col, F32 scalar)
 	);
 }
 
-bns::Vec3F bns::TriangleF::BarycentricCoordinates(F32 x, F32 y, F32 z) const
+bns::Vec3F bns::TriangleF::BarycentricCoordinates(bns::F32 x, bns::F32 y, bns::F32 z) const
 {
 	// https://www.youtube.com/watch?v=EZXz-uPyCyA
 			// https://gamedev.stackexchange.com/questions/23743/whats-the-most-efficient-way-to-find-barycentric-coordinates
@@ -444,17 +458,17 @@ bns::Vec3F bns::TriangleF::BarycentricCoordinates(F32 x, F32 y, F32 z) const
 	Vec3F v1 = C - A;
 	Vec3F v2 = Vec3F(x, y, z) - A;
 
-	F32 d00 = v0.Dot(v0);
-	F32 d01 = v0.Dot(v1);
-	F32 d11 = v1.Dot(v1);
-	F32 d20 = v2.Dot(v0);
-	F32 d21 = v2.Dot(v1);
+	bns::F32 d00 = v0.Dot(v0);
+	bns::F32 d01 = v0.Dot(v1);
+	bns::F32 d11 = v1.Dot(v1);
+	bns::F32 d20 = v2.Dot(v0);
+	bns::F32 d21 = v2.Dot(v1);
 
-	F32 denom = d00 * d11 - d01 * d01;
+	bns::F32 denom = d00 * d11 - d01 * d01;
 
-	F32 b_y = (d11 * d20 - d01 * d21) / denom;
-	F32 b_z = (d00 * d21 - d01 * d20) / denom;
-	F32 b_x = 1.0f - b_y - b_z;
+	bns::F32 b_y = (d11 * d20 - d01 * d21) / denom;
+	bns::F32 b_z = (d00 * d21 - d01 * d20) / denom;
+	bns::F32 b_x = 1.0f - b_y - b_z;
 
 	return Vec3F(b_x, b_y, b_z);
 }
@@ -475,8 +489,8 @@ bns::SphereF::SphereF() :
 }
 
 bns::Mat2x2F::Mat2x2F(
-	F32 r0c0, F32 r0c1,
-	F32 r1c0, F32 r1c1)
+	bns::F32 r0c0, bns::F32 r0c1,
+	bns::F32 r1c0, bns::F32 r1c1)
 	: R0C0(r0c0), R0C1(r0c1),
 	R1C0(r1c0), R1C1(r1c1)
 {
@@ -488,16 +502,16 @@ bns::Mat2x2F::Mat2x2F()
 		0.0f, 1.0f
 	) {}
 
-F32 bns::Mat2x2F::Determinant() const
+bns::F32 bns::Mat2x2F::Determinant() const
 {
-	F32 result = this->R0C0 * this->R1C1 - this->R1C0 * this->R0C1;
+	bns::F32 result = this->R0C0 * this->R1C1 - this->R1C0 * this->R0C1;
 	return result;
 }
 
-F32* bns::Mat2x2F::operator[](U32 index)
+bns::F32* bns::Mat2x2F::operator[](U32 index)
 {
 	// Get pointer to x and increase by index, then dereference
-	F32* result = (&this->R0C0 + index);
+	bns::F32* result = (&this->R0C0 + index);
 
 	return result;
 }
@@ -512,10 +526,10 @@ bns::Mat4x4F::Mat4x4F()
 {
 }
 
-bns::Mat4x4F::Mat4x4F(F32 r0c0, F32 r0c1, F32 r0c2, F32 r0c3,
-	F32 r1c0, F32 r1c1, F32 r1c2, F32 r1c3,
-	F32 r2c0, F32 r2c1, F32 r2c2, F32 r2c3,
-	F32 r3c0, F32 r3c1, F32 r3c2, F32 r3c3)
+bns::Mat4x4F::Mat4x4F(bns::F32 r0c0, bns::F32 r0c1, bns::F32 r0c2, bns::F32 r0c3,
+	bns::F32 r1c0, bns::F32 r1c1, bns::F32 r1c2, bns::F32 r1c3,
+	bns::F32 r2c0, bns::F32 r2c1, bns::F32 r2c2, bns::F32 r2c3,
+	bns::F32 r3c0, bns::F32 r3c1, bns::F32 r3c2, bns::F32 r3c3)
 	:
 	R0C0(r0c0), R0C1(r0c1), R0C2(r0c2), R0C3(r0c3),
 	R1C0(r1c0), R1C1(r1c1), R1C2(r1c2), R1C3(r1c3),
@@ -524,10 +538,10 @@ bns::Mat4x4F::Mat4x4F(F32 r0c0, F32 r0c1, F32 r0c2, F32 r0c3,
 {
 
 }
-F32* bns::Mat4x4F::operator[](U32 index)
+bns::F32* bns::Mat4x4F::operator[](U32 index)
 {
 	// Get pointer to x and increase by index, then dereference
-	F32* result = (&this->R0C0 + index);
+	bns::F32* result = (&this->R0C0 + index);
 
 	return result;
 }
@@ -633,36 +647,36 @@ bns::Mat3x3F bns::Mat3x3F::Identity()
 	return bns::Mat3x3F();
 }
 
-F32 bns::Mat3x3F::Determinant() const
+bns::F32 bns::Mat3x3F::Determinant() const
 {
-	F32 a = this->Cofactor(0, 0);
-	F32 b = this->Cofactor(0, 1);
-	F32 c = this->Cofactor(0, 2);
+	bns::F32 a = this->Cofactor(0, 0);
+	bns::F32 b = this->Cofactor(0, 1);
+	bns::F32 c = this->Cofactor(0, 2);
 
-	F32 d = this->R0C0 * a + this->R0C1 * b + this->R0C2 * c;
+	bns::F32 d = this->R0C0 * a + this->R0C1 * b + this->R0C2 * c;
 	return d;
 }
 
-F32 bns::Mat3x3F::AtIndex(U32 row, U32 col) const
+bns::F32 bns::Mat3x3F::AtIndex(U32 row, U32 col) const
 {
-	F32 result = *(&this->R0C0 + (col * 3 + row));
+	bns::F32 result = *(&this->R0C0 + (col * 3 + row));
 	return result;
 }
 
-F32 bns::Mat4x4F::AtIndex(U32 row, U32 col) const
+bns::F32 bns::Mat4x4F::AtIndex(U32 row, U32 col) const
 {
-	F32 result = *(&this->R0C0 + (col * 4 + row));
+	bns::F32 result = *(&this->R0C0 + (col * 4 + row));
 	return result;
 }
 
-F32 bns::Mat3x3F::Minor(U32 row, U32 col) const
+bns::F32 bns::Mat3x3F::Minor(U32 row, U32 col) const
 {
 	bns::Mat2x2F sub = this->SubMatrix(row, col);
-	F32 d = sub.Determinant();
+	bns::F32 d = sub.Determinant();
 	return d;
 }
 
-F32 bns::Mat3x3F::Cofactor(U32 row, U32 col) const
+bns::F32 bns::Mat3x3F::Cofactor(U32 row, U32 col) const
 {
 	I32 sign = 1;
 
@@ -677,8 +691,8 @@ F32 bns::Mat3x3F::Cofactor(U32 row, U32 col) const
 		sign = -1;
 	}
 
-	F32 minor = this->Minor(row, col);
-	F32 result = minor * sign;
+	bns::F32 minor = this->Minor(row, col);
+	bns::F32 result = minor * sign;
 	return result;
 }
 
@@ -688,10 +702,10 @@ bns::Mat4x4F bns::Mat4x4F::Identity()
 	return result;
 }
 
-F32 bns::Mat4x4F::Minor(U32 row, U32 col) const
+bns::F32 bns::Mat4x4F::Minor(U32 row, U32 col) const
 {
 	bns::Mat3x3F sub = this->SubMatrix(row, col);
-	F32 d = sub.Determinant();
+	bns::F32 d = sub.Determinant();
 	return d;
 }
 
@@ -705,9 +719,9 @@ bns::Mat4x4F::Mat4x4F(bns::Mat3x3F m)
 {
 }
 
-F32 bns::Mat4x4F::Cofactor(U32 row, U32 col) const
+bns::F32 bns::Mat4x4F::Cofactor(U32 row, U32 col) const
 {
-	F32 sign = 1.0f;
+	bns::F32 sign = 1.0f;
 
 	// For cofactor rule is
 	// | + - + - |
@@ -721,20 +735,20 @@ F32 bns::Mat4x4F::Cofactor(U32 row, U32 col) const
 		sign = -1.0f;
 	}
 
-	F32 minor = this->Minor(row, col);
-	F32 result = minor * sign;
+	bns::F32 minor = this->Minor(row, col);
+	bns::F32 result = minor * sign;
 
 	return result;
 }
 
-F32 bns::Mat4x4F::Determinant() const
+bns::F32 bns::Mat4x4F::Determinant() const
 {
-	F32 a = this->Cofactor(0, 0);
-	F32 b = this->Cofactor(0, 1);
-	F32 c = this->Cofactor(0, 2);
-	F32 d = this->Cofactor(0, 3);
+	bns::F32 a = this->Cofactor(0, 0);
+	bns::F32 b = this->Cofactor(0, 1);
+	bns::F32 c = this->Cofactor(0, 2);
+	bns::F32 d = this->Cofactor(0, 3);
 
-	F32 result = this->R0C0 * a + this->R0C1 * b + this->R0C2 * c + this->R0C3 * d;
+	bns::F32 result = this->R0C0 * a + this->R0C1 * b + this->R0C2 * c + this->R0C3 * d;
 	return result;
 }
 
@@ -743,12 +757,12 @@ bns::Mat4x4F bns::Mat4x4F::Inverse(const bns::Mat4x4F& m)
 	bns::Mat4x4F result = bns::Mat4x4F::Identity();
 
 	// TODO: 
-	F32 d = m.Determinant();
+	bns::F32 d = m.Determinant();
 	for (U32 c = 0; c < 4; c++)
 	{
 		for (U32 r = 0; r < 4; r++)
 		{
-			F32 cofactor = m.Cofactor(r, c);
+			bns::F32 cofactor = m.Cofactor(r, c);
 
 			// note the fliped for col in index
 			*result[r * 4 + c] = cofactor / d;
@@ -768,7 +782,7 @@ bns::Mat4x4F bns::Mat4x4F::Transpose(bns::Mat4x4F m)
 	);
 }
 
-bns::Mat4x4F bns::Mat4x4F::Translate(F32 x, F32 y, F32 z)
+bns::Mat4x4F bns::Mat4x4F::Translate(bns::F32 x, bns::F32 y, bns::F32 z)
 {
 	return bns::Mat4x4F(
 		1.0f, 0.0f, 0.0f, x,
@@ -783,7 +797,7 @@ bns::Mat4x4F bns::Mat4x4F::Translate(bns::Vec3F v)
 	return bns::Mat4x4F::Translate(v.X, v.Y, v.Z);
 }
 
-bns::Mat4x4F bns::Mat4x4F::Scale(F32 x, F32 y, F32 z)
+bns::Mat4x4F bns::Mat4x4F::Scale(bns::F32 x, bns::F32 y, bns::F32 z)
 {
 	return bns::Mat4x4F(
 		x, 0.0f, 0.0f, 0.0f,
@@ -855,7 +869,7 @@ bns::Mat4x4F bns::Mat4x4F::LookAt(const Vec3F& eye, const Vec3F& center, const V
 	return result;
 }
 
-bns::Mat4x4F bns::Mat4x4F::RotationMatrix(F32 theta_in_radians, bns::Vec3F axis)
+bns::Mat4x4F bns::Mat4x4F::RotationMatrix(bns::F32 theta_in_radians, bns::Vec3F axis)
 {
 	// I3 = identity 3x3 matrix
 	//											  | xx xy xz |              | 0 -z y |
@@ -866,9 +880,9 @@ bns::Mat4x4F bns::Mat4x4F::RotationMatrix(F32 theta_in_radians, bns::Vec3F axis)
 	axis.Normalize();
 
 	// Unit vector components. Unit vector is v/|v|  where v is vector, and |v| is length of vector.
-	F32 x = axis.X;
-	F32 y = axis.Y;
-	F32 z = axis.Z;
+	bns::F32 x = axis.X;
+	bns::F32 y = axis.Y;
+	bns::F32 z = axis.Z;
 
 	bns::Mat3x3F a = Cos(theta_in_radians) * bns::Mat3x3F::Identity();
 
@@ -906,7 +920,7 @@ bns::Vec3F& bns::Vec3F::operator-=(const Vec3F& rhs)
 	return *this;
 }
 
-bns::Vec3F& bns::Vec3F::operator*=(const F32 scalar)
+bns::Vec3F& bns::Vec3F::operator*=(const bns::F32 scalar)
 {
 	X *= scalar;
 	Y *= scalar;
@@ -914,7 +928,7 @@ bns::Vec3F& bns::Vec3F::operator*=(const F32 scalar)
 	return *this;
 }
 
-bns::Vec3F& bns::Vec3F::operator/=(const F32 scalar)
+bns::Vec3F& bns::Vec3F::operator/=(const bns::F32 scalar)
 {
 	X /= scalar;
 	Y /= scalar;
@@ -922,16 +936,16 @@ bns::Vec3F& bns::Vec3F::operator/=(const F32 scalar)
 	return *this;
 }
 
-F32 bns::Vec3F::Length() const
+bns::F32 bns::Vec3F::Length() const
 {
-	F32 result = X * X + Y * Y + Z * Z;
+	bns::F32 result = X * X + Y * Y + Z * Z;
 	result = Sqrt(result);
 	return result;
 }
 
 void bns::Vec3F::Normalize()
 {
-	F32 l = Length();
+	bns::F32 l = Length();
 	if (l > 0)
 	{
 		X /= l;
@@ -951,12 +965,12 @@ void bns::Vec3F::SetLengthToZero()
 	Z = 0;
 }
 
-bns::Vec4F bns::Vec3F::ToVec4F(F32 w) const
+bns::Vec4F bns::Vec3F::ToVec4F(bns::F32 w) const
 {
 	return bns::Vec4F(X, Y, Z, 0.0f);
 }
 
-bns::Point4F bns::Vec3F::ToPoint4F(F32 w) const
+bns::Point4F bns::Vec3F::ToPoint4F(bns::F32 w) const
 {
 	return bns::Point4F(X, Y, Z, w);
 }
@@ -974,7 +988,7 @@ bns::Vec3F bns::Vec3F::Cross(const Vec3F& a, const Vec3F& b)
 
 inline bns::Vec3F bns::Vec3F::Normalize(const Vec3F& in)
 {
-	F32 l = in.Length();
+	bns::F32 l = in.Length();
 	Vec3F result =
 	{
 		in.X / l,
@@ -984,22 +998,22 @@ inline bns::Vec3F bns::Vec3F::Normalize(const Vec3F& in)
 	return result;
 }
 
-inline F32 bns::Vec3F::Dot(const bns::Vec3F& a, const bns::Vec3F& b)
+inline bns::F32 bns::Vec3F::Dot(const bns::Vec3F& a, const bns::Vec3F& b)
 {
-	F32 result = a.X * b.X + a.Y * b.Y + a.Z * b.Z;
+	bns::F32 result = a.X * b.X + a.Y * b.Y + a.Z * b.Z;
 	return result;
 }
 
 inline bns::Vec3F bns::Vec3F::Reflect(const Vec3F& v, const Vec3F& n)
 {
-	F32 v_dot_n = bns::Vec3F::Dot(v, n);
+	bns::F32 v_dot_n = bns::Vec3F::Dot(v, n);
 	bns::Vec3F result = v - 2 * v_dot_n * n;
 	return result;
 }
 
-F32 bns::Vec3F::Dot(const Vec3F& other) const
+bns::F32 bns::Vec3F::Dot(const Vec3F& other) const
 {
-	F32 result = this->X * other.X +
+	bns::F32 result = this->X * other.X +
 		this->Y * other.Y +
 		this->Z * other.Z;
 
@@ -1011,7 +1025,7 @@ bns::Vec3F bns::Vec3F::UnitZ()
 	return { 0.0f, 0.0f, 1.0f };
 }
 
-bns::Vec4F::Vec4F(F32 x, F32 y, F32 z, F32 w)
+bns::Vec4F::Vec4F(bns::F32 x, bns::F32 y, bns::F32 z, bns::F32 w)
 	:X(x), Y(y), Z(z), W(w)
 {
 }
@@ -1021,9 +1035,9 @@ bns::Vec4F::Vec4F()
 {
 }
 
-F32 bns::Vec4F::Dot(const bns::Vec4F& v) const
+bns::F32 bns::Vec4F::Dot(const bns::Vec4F& v) const
 {
-	F32 result = this->X * v.X
+	bns::F32 result = this->X * v.X
 		+ this->Y * v.Y
 		+ this->Z * v.Z
 		+ this->W + v.W;
@@ -1040,7 +1054,7 @@ bns::Vec3F bns::Vec4F::ToVec3F() const
 	return bns::Vec3F(X, Y, Z);
 }
 
-bns::Point4F::Point4F(F32 x, F32 y, F32 z, F32 w)
+bns::Point4F::Point4F(bns::F32 x, bns::F32 y, bns::F32 z, bns::F32 w)
 	: X(x), Y(y), Z(z), W(w)
 {
 }
@@ -1073,32 +1087,32 @@ bns::Mat3x3F::Mat3x3F()
 }
 
 bns::Mat3x3F::Mat3x3F(
-	F32 r0c0, F32 r0c1, F32 r0c2,
-	F32 r1c0, F32 r1c1, F32 r1c2,
-	F32 r2c0, F32 r2c1, F32 r2c2)
+	bns::F32 r0c0, bns::F32 r0c1, bns::F32 r0c2,
+	bns::F32 r1c0, bns::F32 r1c1, bns::F32 r1c2,
+	bns::F32 r2c0, bns::F32 r2c1, bns::F32 r2c2)
 	: R0C0(r0c0), R0C1(r0c1), R0C2(r0c2),
 	R1C0(r1c0), R1C1(r1c1), R1C2(r1c2),
 	R2C0(r2c0), R2C1(r2c1), R2C2(r2c2)
 {
 }
 
-F32* bns::Mat3x3F::operator[](U32 index)
+bns::F32* bns::Mat3x3F::operator[](U32 index)
 {
 	// Get pointer to x and increase by index, then dereference
-	F32* result = (&this->R0C0 + index);
+	bns::F32* result = (&this->R0C0 + index);
 
 	return result;
 }
 
-F32* bns::Vec2F::operator[](U32 index)
+bns::F32* bns::Vec2F::operator[](U32 index)
 {
 	// Get pointer to x and increase by index, then dereference
-	F32* result = (&this->X + index);
+	bns::F32* result = (&this->X + index);
 
 	return result;
 }
 
-bns::Point3F::Point3F(F32 x, F32 y, F32 z)
+bns::Point3F::Point3F(bns::F32 x, bns::F32 y, bns::F32 z)
 	:X(x), Y(y), Z(z)
 {
 }
@@ -1112,3 +1126,30 @@ bns::Vec3F bns::Point3F::ToVec3F() const
 {
 	return bns::Vec3F(X, Y, Z);
 }
+
+bns::F32 bns::Max(F32 a, F32 b)
+{
+	return a > b ? a : b;
+}
+
+bns::F32 bns::Min(F32 a, F32 b)
+{
+	return a < b ? a : b;
+}
+
+void bns::Swap(F32* a, F32* b)
+{
+	F32 temp = *a;
+	*a = *b;
+	*b = temp;
+}
+
+#pragma region MATRIX 4x4
+
+bns::Vec3F bns::operator*(const Mat4x4F& m, const Vec3F& v)
+{
+	bns::Vec4F result = m * v.ToVec4F();
+	return result.ToVec3F();
+}
+
+#pragma endregion

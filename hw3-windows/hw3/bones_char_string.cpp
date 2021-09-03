@@ -1,9 +1,9 @@
 #include "bones_char_string.hpp"
 #include <string>
 
-void ReadI32FromString(const char* string, I32 start_index, I32* out_end_index, I32* out_integer)
+void bns::ReadI32FromString(const char* string, bns::I32 start_index, bns::I32* out_end_index, bns::I32* out_integer)
 {
-	I32 result = 0;
+	bns::I32 result = 0;
 
 	// increment index until first digit is found
 	while (!isdigit(string[start_index]))
@@ -11,7 +11,7 @@ void ReadI32FromString(const char* string, I32 start_index, I32* out_end_index, 
 		start_index++;
 	}
 
-	I32 multiplier = 1;
+	bns::I32 multiplier = 1;
 	if (string[start_index - 1] == '-')
 	{
 		multiplier = -1;
@@ -27,16 +27,16 @@ void ReadI32FromString(const char* string, I32 start_index, I32* out_end_index, 
 	*out_integer = result * multiplier;
 }
 
-void ReadI32FromString(const char* string, I32 start_index, I32* out_integer)
+void bns::ReadI32FromString(const char* string, bns::I32 start_index, bns::I32* out_integer)
 {
 	// Don't care about end index.
-	I32 end_index = 0;
+	bns::I32 end_index = 0;
 	ReadI32FromString(string, start_index, &end_index, out_integer);
 }
 
-void ReadF32FromString(const char* string, I32 start_index, I32* out_end_index, F32* out_real)
+void bns::ReadF32FromString(const char* string, bns::I32 start_index, bns::I32* out_end_index, bns::F32* out_real)
 {
-	F32 result = 0;
+	bns::F32 result = 0;
 
 	// increment index until first digit is found, or '.' is found with digit after dot
 	while (
@@ -49,7 +49,7 @@ void ReadF32FromString(const char* string, I32 start_index, I32* out_end_index, 
 		start_index++;
 	}
 
-	I32 multiplier = 1;
+	bns::I32 multiplier = 1;
 	if (string[start_index - 1] == '-')
 	{
 		multiplier = -1;
@@ -57,7 +57,7 @@ void ReadF32FromString(const char* string, I32 start_index, I32* out_end_index, 
 
 	
 	bool is_decimal = false;
-	F32 denominator = 0.0f;
+	bns::F32 denominator = 0.0f;
 	while (isdigit(string[start_index]) || string[start_index] == '.')
 	{
 		if (string[start_index] == '.')

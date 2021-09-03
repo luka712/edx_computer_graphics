@@ -154,6 +154,7 @@
     <ClCompile Include="bones_char_string.cpp" />
     <ClCompile Include="bones_files.cpp" />
     <ClCompile Include="bones_lights.cpp" />
+    <ClCompile Include="bones_loaders.cpp" />
     <ClCompile Include="bones_material.cpp" />
     <ClCompile Include="bones_math.cpp" />
     <ClCompile Include="bones_raytracer.cpp" />
@@ -163,6 +164,7 @@
     <ClInclude Include="bones_char_string.hpp" />
     <ClInclude Include="bones_files.hpp" />
     <ClInclude Include="bones_lights.hpp" />
+    <ClInclude Include="bones_loaders.hpp" />
     <ClInclude Include="bones_material.hpp" />
     <ClInclude Include="bones_math.hpp" />
     <ClInclude Include="bones_raytracer.hpp" />

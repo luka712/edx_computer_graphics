@@ -1,0 +1,86 @@
+#Cornell Box
+size 900 900
+#size 1280 960
+camera 0 1.5 5 0 1 0 0 1 0 65
+output scene6.png
+
+maxdepth 5
+
+ambient 0.1 0.1 0.1
+specular 0 0 0
+shininess 64
+emission 0 0 0
+diffuse 0 0 0
+
+attenuation 1 0 0
+
+point -10 10 10 0.8 0.8 0.8
+#directional 0 1 -1 0.2 0.2 0.2
+
+diffuse 0 0 1
+
+pushTransform
+
+# floor 
+pushTransform
+diffuse 0.7 0.7 0.7
+specular 0.2 0.2 0.2
+plane
+popTransform
+
+# wall 
+pushTransform
+diffuse 0.6 0.6 0.6
+specular 0.1 0.1 0.1
+translate 0 0 -13
+rotate 1 0 0 60
+plane
+popTransform
+
+# middle sphere
+pushTransform
+translate -0.5 1 0.5
+diffuse 0.1 1 0.1
+specular 0.5 0.5 0.5
+sphere 0 0 0 1
+popTransform
+
+# back sphere
+pushTransform
+translate 2.5 0.7 -0.5
+scale 0.7 0.7 0.7
+diffuse 0.1 0.5 1
+specular 0.3 0.3 0.3
+sphere 0 0 0 1
+popTransform
+
+# right cube
+pushTransform
+translate 0.7 0.4 1.5
+scale 0.4 0.4 0.4
+rotate 0 1 0 130
+diffuse 0.5 1 1
+specular 0.3 0.3 0.3
+cube
+popTransform
+
+# left cube 
+pushTransform
+translate -1 0.33 2
+scale 0.33 0.33 0.33
+rotate 0 1 0 10
+diffuse 0.96 0.05 0.05
+specular 0.3 0.3 0.3
+cube
+popTransform
+
+# cylinder
+pushTransform
+translate 1.2 0.15 2.2
+scale 0.3 0.3 0.3
+diffuse 0.96 0.95 0.05
+specular 0.4 0.4 0.4
+cylinder
+popTransform
+
+popTransform

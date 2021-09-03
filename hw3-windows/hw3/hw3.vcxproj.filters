@@ -36,6 +36,9 @@
     <ClCompile Include="bones_lights.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="bones_loaders.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bones_math.hpp">
@@ -63,6 +66,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="bones_lights.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="bones_loaders.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

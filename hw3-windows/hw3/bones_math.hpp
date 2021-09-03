@@ -180,6 +180,21 @@ namespace bns
 		F32 result = start2 + ((end2 - start2) / (end1 - start1)) * (value - start1);
 		return result;
 	}
+
+	/// <summary>
+	/// Get the max value of two.
+	/// </summary>
+	F32 Max(F32 a, F32 b);
+
+	/// <summary>
+	/// Get the min value of two.
+	/// </summary>
+	F32 Min(F32 a, F32 b);
+
+	/// <summary>
+	/// Swap the values.
+	/// </summary>
+	void Swap(F32* a, F32* b);
 }
 /*
 	NOTES: magnitude/length of vector is same thing, but depends on context. If vector is line segment one can ask for it's length, if vector is representing a physical quantity
@@ -877,9 +892,11 @@ namespace bns
 		friend bns::Mat3x3F operator+(const bns::Mat3x3F& a, const bns::Mat3x3F& b);
 	};
 
+#pragma region MATRIX 4x4
+
 	/// <summary>
-	/// Matrix 4x4 of F32 components.
-	/// </summary>
+/// Matrix 4x4 of F32 components.
+/// </summary>
 	struct Mat4x4F
 	{
 		// first col
@@ -932,6 +949,11 @@ namespace bns
 		/// </summary>
 		Mat4x4F operator*=(const Mat4x4F& b);
 
+		/// <summary>
+		/// Multiply matrix by 3x1 vector. While this is invalid operation with matrices,
+		/// here vec3 is simply casted to vec4 with w component being set to 0.
+		/// </summary>
+		friend Vec3F operator*(const Mat4x4F& m, const Vec3F& v);
 
 		/// <summary>
 		/// Multiply matrix by a vector.
@@ -953,7 +975,7 @@ namespace bns
 		/// Get the submatrix from matrix, excluding row and column.
 		/// Row and col are 0 based.
 		/// </summary>
-		bns::Mat3x3F SubMatrix(U32 row, U32 col) const ;
+		bns::Mat3x3F SubMatrix(U32 row, U32 col) const;
 
 		/// <summary>
 		/// Gets the minor of matrix.
@@ -1016,6 +1038,11 @@ namespace bns
 		/// <returns></returns>
 		static Mat4x4F LookAt(const Vec3F& eye, const Vec3F& look_at, const Vec3F& up);
 	};
+
+#pragma endregion
+
+
+
 
 	/// <summary>
 	/// Structure for representing a simple point with I32 components.

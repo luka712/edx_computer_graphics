@@ -4,6 +4,7 @@
 
 #define BONES_RAYTRACER_H
 
+#include <vector>
 #include "bones_math.hpp"
 #include "bones_material.hpp"
 #include "bones_lights.hpp"
@@ -15,9 +16,9 @@ namespace bns
 	/// </summary>
 	struct Camera
 	{
-		bns::Vec3F LookFrom;
-		bns::Vec3F LookAt;
-		bns::Vec3F Up;
+		Vec3F LookFrom;
+		Vec3F LookAt;
+		Vec3F Up;
 		U32 ScreenWidth;
 		U32 ScreenHeight;
 		// Field of view 
@@ -38,7 +39,10 @@ namespace bns
 	enum class ShapeType
 	{
 		Sphere,
-		Triangle
+		Triangle,
+		Cube,
+		Plane, 
+		Cylinder
 	};
 
 	struct Intersections;
@@ -70,14 +74,19 @@ namespace bns
 		F32 N2;
 	};
 
+
+
+#pragma region BASE SHAPE
+
 	struct BaseShape
 	{
 	private:
 		bns::Mat4x4F Transform;
 		bns::Mat4x4F InverseTransform;
-		
+
 	public:
 		bns::Material Material;
+		bns::BaseShape* Parent;
 
 		BaseShape();
 
@@ -86,12 +95,12 @@ namespace bns
 		/// 
 		/// NOTE: fill_intersections must be defined, and is filled by this function.
 		/// </summary>
-		virtual void IntersectRayAndObjects(const bns::RayF& ray, Intersections& fill_intersections) const = 0;
+		virtual void IntersectWithRay(const bns::RayF& ray, Intersections& fill_intersections) const = 0;
 
 		/// <summary>
 		/// Gets the normal
 		/// </summary>
-		virtual bns::Vec3F GetNormalAt(bns::Point3F point) const = 0;
+		virtual bns::Vec3F GetLocalNormalAt(bns::Point3F point) const = 0;
 
 		/// <summary>
 		/// Gets the transform matrix.
@@ -110,15 +119,26 @@ namespace bns
 		void SetTransform(bns::Mat4x4F m);
 	};
 
-	struct TriangleShape  : BaseShape
+#pragma endregion
+
+#pragma region TRIANGLE SHAPE
+	
+	/// <summary>
+	/// The triangle shape.
+	/// </summary>
+	struct TriangleShape : BaseShape
 	{
 		bns::TriangleF Triangle;
 
 		TriangleShape();
 
-		void IntersectRayAndObjects(const bns::RayF& ray, Intersections& fill_intersections) const override;
-		bns::Vec3F GetNormalAt(bns::Point3F point) const override;
+		void IntersectWithRay(const bns::RayF& ray, Intersections& fill_intersections) const override;
+		bns::Vec3F GetLocalNormalAt(bns::Point3F point) const override;
 	};
+
+#pragma endregion
+
+#pragma region SPHERE SHAPE
 
 	struct SphereShape :BaseShape
 	{
@@ -126,9 +146,101 @@ namespace bns
 
 		SphereShape();
 
-		void IntersectRayAndObjects(const bns::RayF& ray, Intersections& fill_intersections) const override;
-		bns::Vec3F GetNormalAt(bns::Point3F point) const override;
+		/// <summary>
+		/// Checks if there are intersections between ray and shape and fills intersections accordingly.
+		/// </summary>
+		void IntersectWithRay(const bns::RayF& ray, Intersections& fill_intersections) const override;
+
+		/// <summary>
+		/// Gets the local normal of shape at passed point.
+		/// </summary>
+		bns::Vec3F GetLocalNormalAt(bns::Point3F point) const override;
 	};
+
+#pragma endregion
+
+#pragma region CUBE SHAPE
+
+	struct CubeShape : BaseShape
+	{
+		CubeShape();
+
+		/// <summary>
+		/// Checks if ray intersects plane and return minimum and maximum t value.
+		/// </summary>
+		void CheckAxis(F32 origin, F32 direction, F32* tmin, F32* tmax) const;
+		void IntersectWithRay(const bns::RayF& ray, Intersections& fill_intersections) const override;
+		bns::Vec3F GetLocalNormalAt(bns::Point3F point) const override;
+	};
+
+#pragma endregion
+
+#pragma region PLANE SHAPE
+
+	struct PlaneShape : BaseShape
+	{
+		void IntersectWithRay(const RayF& ray, Intersections& fill_intersections) const override;
+		Vec3F GetLocalNormalAt(bns::Point3F point) const override;
+	};
+
+#pragma endregion
+
+#pragma region CYLINDER SHAPE
+
+	struct CylinderShape : BaseShape
+	{
+		// Minimum and Maximum define edges of cylinder in order for it, not to stretch to infinity.
+		F32 Minimum;
+		F32 Maximum;
+
+		// Is cylinder capped at bottom and top.
+		bool Capped;
+
+		CylinderShape();
+		void IntersectWithRay(const RayF& ray, Intersections& fill_intersections) const override;
+		Vec3F GetLocalNormalAt(bns::Point3F point) const override;
+
+	private:
+		/// <summary>
+		/// Helper function.
+		/// Checks to see if the intersection as `t` is withing a radius
+		/// of 1 ( the radius of cylinders ) from the y axis.
+		/// </summary>
+		bool CheckCap(const RayF& ray, F32 t) const;
+
+		/// <summary>
+		/// Helper function.
+		/// Fills intersections for cylinders caps.
+		/// </summary>
+		/// <param name="ray"></param>
+		/// <param name="fill_intersections"></param>
+		void IntersectCaps(const RayF& ray, Intersections& fill_intersections) const;
+	};
+
+#pragma endregion
+
+#pragma region GROUP SHAPE
+
+	class Group : public BaseShape
+	{
+
+	};
+
+#pragma endregion
+
+#pragma region SHAPE HELPERS
+
+	/// <summary>
+	/// Transform the local_normal to world normal.
+	/// </summary>
+	bns::Vec3F GetWorldNormalAt(const bns::BaseShape& shape, bns::Vec3F local_normal);
+
+	/// <summary>
+	/// Transform the world point to local point.
+	/// </summary>
+	bns::Point4F WorldPointToLocalPoint(const bns::BaseShape& shape, bns::Point4F world_point);
+
+#pragma endregion
 
 	struct Intersection
 	{
@@ -157,6 +269,16 @@ namespace bns
 		/// Gets the pointer intersection with minimal distance if present.
 		/// </summary>
 		Intersection* Hit();
+	};
+
+	/// <summary>
+	/// The raytracer scene.
+	/// </summary>
+	struct RayTracerScene
+	{
+		std::vector<Camera> Cameras;
+		std::vector<BaseShape*> Shapes;
+		std::vector<BaseLight*> Lights;
 	};
 
 	/// <summary>

@@ -5,9 +5,27 @@
 #include "bones_math.hpp"
 #include "bones_files.hpp"
 #include "bones_char_string.hpp"
+#include "bones_scene_common.hpp"
+#include <iostream>
 
+/// <summary>
+/// Helper method which simply checks if shape should be added to group or scene.
+/// Also sets the shape transform matrix from stack.
+/// </summary>
+void MovePtrToGroupOrScene(bns::RaytracerScene& scene, std::stack<bns::Mat4x4F>& matrix_stack, bns::GroupShape* group_shape, bns::BaseShape* ptr_shape)
+{
+	if (group_shape != nullptr)
+	{
+		group_shape->AddChild(ptr_shape);
+	}
+	else
+	{
+		scene.Shapes.push_back(ptr_shape);
+	}
+	ptr_shape->SetTransform(matrix_stack.top());
+}
 
-void bns::LoadSceneFromBnsFileFormat(const char* filename, bns::RayTracerScene& scene)
+void bns::LoadRaytracerSceneFromBnsFileFormat(const char* filename, bns::RaytracerScene& scene)
 {
 	std::vector<bns::Vec3F> vertices;
 
@@ -19,9 +37,10 @@ void bns::LoadSceneFromBnsFileFormat(const char* filename, bns::RayTracerScene& 
 	std::string line;
 	std::stringstream file_stream(file->Contents);
 
-
 	std::stack<bns::Mat4x4F> matrix_stack;
 	matrix_stack.push(bns::Mat4x4F::Identity());
+
+	bns::GroupShape* group_shape = nullptr;
 
 	bns::ColorF ambient_color = bns::ColorF(.2f, .2f, .2f);
 	bns::ColorF emission_color;
@@ -38,35 +57,35 @@ void bns::LoadSceneFromBnsFileFormat(const char* filename, bns::RayTracerScene& 
 		{
 			break;
 		}
-		if (line.rfind("size", 0) == 0)
+		else if (line.rfind("size", 0) == 0)
 		{
-			bns::I32 end_index = 0;
+			bns::I32 index = 0;
 
-			bns::ReadI32FromString(line.c_str(), end_index, &end_index, &camera_width);
-			bns::ReadI32FromString(line.c_str(), end_index, &end_index, &camera_height);
+			bns::ReadI32FromString(line.c_str(), index, &index, &camera_width);
+			bns::ReadI32FromString(line.c_str(), index, &index, &camera_height);
 		}
 		else if (line.rfind("camera", 0) == 0)
 		{
-			bns::I32 end_index = 0;
+			bns::I32 index = 0;
 			const char* ptr_to_camera = line.c_str();
 
 			bns::Vec3F eyeinit;
-			bns::ReadF32FromString(ptr_to_camera, end_index, &end_index, &eyeinit.X);
-			bns::ReadF32FromString(ptr_to_camera, end_index, &end_index, &eyeinit.Y);
-			bns::ReadF32FromString(ptr_to_camera, end_index, &end_index, &eyeinit.Z);
+			bns::ReadF32FromString(ptr_to_camera, index, &index, &eyeinit.X);
+			bns::ReadF32FromString(ptr_to_camera, index, &index, &eyeinit.Y);
+			bns::ReadF32FromString(ptr_to_camera, index, &index, &eyeinit.Z);
 
 			bns::Vec3F center;
-			bns::ReadF32FromString(ptr_to_camera, end_index, &end_index, &center.X);
-			bns::ReadF32FromString(ptr_to_camera, end_index, &end_index, &center.Y);
-			bns::ReadF32FromString(ptr_to_camera, end_index, &end_index, &center.Z);
+			bns::ReadF32FromString(ptr_to_camera, index, &index, &center.X);
+			bns::ReadF32FromString(ptr_to_camera, index, &index, &center.Y);
+			bns::ReadF32FromString(ptr_to_camera, index, &index, &center.Z);
 
 			bns::Vec3F upinit;
-			bns::ReadF32FromString(ptr_to_camera, end_index, &end_index, &upinit.X);
-			bns::ReadF32FromString(ptr_to_camera, end_index, &end_index, &upinit.Y);
-			bns::ReadF32FromString(ptr_to_camera, end_index, &end_index, &upinit.Z);
+			bns::ReadF32FromString(ptr_to_camera, index, &index, &upinit.X);
+			bns::ReadF32FromString(ptr_to_camera, index, &index, &upinit.Y);
+			bns::ReadF32FromString(ptr_to_camera, index, &index, &upinit.Z);
 
 			bns::F32 fov;
-			bns::ReadF32FromString(ptr_to_camera, end_index, &end_index, &fov);
+			bns::ReadF32FromString(ptr_to_camera, index, &index, &fov);
 
 			upinit = bns::Vec3F::Normalize(upinit);
 
@@ -220,10 +239,8 @@ void bns::LoadSceneFromBnsFileFormat(const char* filename, bns::RayTracerScene& 
 			bns::Vec3F B = vertices[i_2];
 			bns::Vec3F C = vertices[i_3];
 
-			scene.Shapes.emplace_back(new bns::TriangleShape());
-			bns::TriangleShape* ptr_triangle = static_cast<bns::TriangleShape*>(scene.Shapes.back());
-			ptr_triangle->Triangle = { A, B, C };
-			ptr_triangle->SetTransform(matrix_stack.top());
+			bns::TriangleShape* ptr_triangle = new bns::TriangleShape(A,B,C);
+			MovePtrToGroupOrScene(scene, matrix_stack, group_shape, ptr_triangle);
 			ptr_triangle->Material.Ambient = ambient_color;
 			ptr_triangle->Material.Emission = emission_color;
 			ptr_triangle->Material.Diffuse = diffuse_color;
@@ -244,11 +261,11 @@ void bns::LoadSceneFromBnsFileFormat(const char* filename, bns::RayTracerScene& 
 			bns::ReadF32FromString(ptr, end_index, &end_index, &z);
 			bns::ReadF32FromString(ptr, end_index, &end_index, &r);
 
-			scene.Shapes.emplace_back(new bns::SphereShape());
-			bns::SphereShape* ptr_sphere = static_cast<bns::SphereShape*>(scene.Shapes.back());
+
+			bns::SphereShape* ptr_sphere = new bns::SphereShape();
+			MovePtrToGroupOrScene(scene, matrix_stack, group_shape, ptr_sphere);
 			ptr_sphere->Sphere.Position = bns::Vec3F(x, y, z);
 			ptr_sphere->Sphere.Radius = r;
-			ptr_sphere->SetTransform(matrix_stack.top());
 			ptr_sphere->Material.Ambient = ambient_color;
 			ptr_sphere->Material.Diffuse = diffuse_color;
 			ptr_sphere->Material.Emission = emission_color;
@@ -258,9 +275,8 @@ void bns::LoadSceneFromBnsFileFormat(const char* filename, bns::RayTracerScene& 
 		}
 		else if (line.rfind("cube", 0) == 0)
 		{
-			scene.Shapes.emplace_back(new bns::CubeShape());
-			bns::CubeShape* ptr_cube = static_cast<bns::CubeShape*>(scene.Shapes.back());
-			ptr_cube->SetTransform(matrix_stack.top());
+			bns::CubeShape* ptr_cube = new bns::CubeShape();
+			MovePtrToGroupOrScene(scene, matrix_stack, group_shape, ptr_cube);
 			ptr_cube->Material.Ambient = ambient_color;
 			ptr_cube->Material.Diffuse = diffuse_color;
 			ptr_cube->Material.Emission = emission_color;
@@ -269,9 +285,8 @@ void bns::LoadSceneFromBnsFileFormat(const char* filename, bns::RayTracerScene& 
 		}
 		else if (line.rfind("plane", 0) == 0)
 		{
-			scene.Shapes.emplace_back(new bns::PlaneShape());
-			bns::PlaneShape* ptr_plane = static_cast<bns::PlaneShape*>(scene.Shapes.back());
-			ptr_plane->SetTransform(matrix_stack.top());
+			bns::PlaneShape* ptr_plane = new bns::PlaneShape();
+			MovePtrToGroupOrScene(scene, matrix_stack, group_shape, ptr_plane);
 			ptr_plane->Material.Ambient = ambient_color;
 			ptr_plane->Material.Diffuse = diffuse_color;
 			ptr_plane->Material.Emission = emission_color;
@@ -280,14 +295,54 @@ void bns::LoadSceneFromBnsFileFormat(const char* filename, bns::RayTracerScene& 
 		}
 		else if (line.rfind("cylinder", 0) == 0)
 		{
-			scene.Shapes.emplace_back(new bns::CylinderShape());
-			bns::CylinderShape* ptr_plane = static_cast<bns::CylinderShape*>(scene.Shapes.back());
-			ptr_plane->SetTransform(matrix_stack.top());
-			ptr_plane->Material.Ambient = ambient_color;
-			ptr_plane->Material.Diffuse = diffuse_color;
-			ptr_plane->Material.Emission = emission_color;
-			ptr_plane->Material.Specular = specular_color;
-			ptr_plane->Material.Shininess = shininess;
+			bns::CylinderShape* ptr_cylinder = new bns::CylinderShape();
+			MovePtrToGroupOrScene(scene, matrix_stack, group_shape, ptr_cylinder);
+			ptr_cylinder->Material.Ambient = ambient_color;
+			ptr_cylinder->Material.Diffuse = diffuse_color;
+			ptr_cylinder->Material.Emission = emission_color;
+			ptr_cylinder->Material.Specular = specular_color;
+			ptr_cylinder->Material.Shininess = shininess;
+		}
+		else if (line.rfind("pushGroup") == 0)
+		{
+			bns::GroupShape* new_group = new bns::GroupShape();
+
+			// if group shape already exists, current group is child therefore it goes to group shape.
+			if (group_shape != nullptr)
+			{
+				new_group->Parent = group_shape;
+				group_shape->AddChild(new_group);
+			}
+			// if there is not group shape, group goes directly in shapes.
+			else
+			{
+				scene.Shapes.push_back(new_group);
+				group_shape = new_group;
+			}
+			new_group->SetTransform(matrix_stack.top());
+		}
+		else if (line.rfind("popGroup") == 0)
+		{
+			// if there is a group shape
+			if (group_shape != nullptr)
+			{
+				// if there is parent, assign it to be new group_shape
+				if (group_shape->Parent != nullptr)
+				{
+					group_shape = group_shape->Parent;
+				}
+				// otherwise there is no more grouping, assign pointer to null.
+				else
+				{
+					group_shape = nullptr;
+				}
+			}
+			else
+			{
+				std::wcout <<
+					"Calling 'popGroup' but there is no group to be poped! 'pushGroup' must be called before 'popGroup' if there is any group to be added."
+					<< std::endl;
+			}
 		}
 		else if (line.rfind("point", 0) == 0)
 		{
@@ -325,4 +380,100 @@ void bns::LoadSceneFromBnsFileFormat(const char* filename, bns::RayTracerScene& 
 
 
 	bns::FreeFileContents(file);
+}
+
+void bns::LoadSceneFromObjFileFormat(const char* filename, RaytracerScene& scene)
+{
+	bns::Camera camera(bns::Vec3F(0.f, 1.5f, 0.f), bns::Vec3F(0.f, 1.f, 0.f), bns::Vec3F(0.f, 1.f, 0.f), 65, 200, 200);
+	scene.Cameras.push_back(camera);
+
+	std::vector<bns::Vec3F> vertices;
+	std::vector < bns::I32> indices;
+
+	bns::FileContents* file = bns::ReadAndCloseFile(filename);
+
+	std::string line;
+	std::stringstream file_stream(file->Contents);
+
+	// TODO: later it should be mesh shape  probably? 
+	bns::GroupShape* group_shape = new GroupShape();
+
+	// TODO: default lights 
+	bns::PointLight *light = new bns::PointLight();
+	light->Color = bns::ColorF(1, 1, 1);
+	light->Attenuation.Constant = 1;
+	scene.Lights.push_back(light);
+
+
+	bns::ColorF ambient_color = bns::ColorF(.2f, .2f, .2f);
+	//bns::ColorF emission_color;
+	//bns::ColorF diffuse_color;
+	//bns::ColorF specular_color;
+	//bns::F32 shininess = 0.0f;
+	//bns::F32 attenuation_constant = 1.0f;
+	//bns::F32 attenuation_linear = 0.0f;
+	//bns::F32 attenuation_quadratic = 0.0f;
+
+	while (std::getline(file_stream, line))
+	{
+		if (line.rfind("vt", 0) == 0)
+		{
+			// TODO: tex coords
+		}
+		else if (line.rfind("vn", 0) == 0) 
+		{
+			// TODO: normals
+		}
+		else if (line.rfind("v", 0) == 0)
+		{
+			// Vertices
+			bns::Vec3F vertex;
+			const char* ptr = line.c_str();
+			bns::I32 end_index = 0;
+			bns::ReadF32FromString(ptr, end_index, &end_index, &vertex.X);
+			bns::ReadF32FromString(ptr, end_index, &end_index, &vertex.Y);
+			bns::ReadF32FromString(ptr, end_index, &end_index, &vertex.Z);
+			vertices.push_back(vertex);
+		}
+		else if (line.rfind("f", 0) == 0)
+		{
+			// Faces
+			bns::I32 end_index = 0;
+
+			// f v1[/vt1][/vn1] v2[/vt2][/vn2] v3[/vt3][/vn3]
+			bns::I32 index = 0;
+			bns::I32 i;
+			while (bns::ReadI32FromString(line.c_str(), end_index, &end_index, &i))
+			{
+				if (index == 0)
+				{
+					indices.push_back(i);
+				}
+
+				index++;
+				if (index > 1)
+				{
+					index = 0;
+				}
+			}
+
+		}
+	}
+
+	for (size_t i = 0; i < indices.size(); i += 3)
+	{
+		bns::Vec3F a = vertices[indices[i]-1];
+		bns::Vec3F b = vertices[indices[i + 1]-1];
+		bns::Vec3F c = vertices[indices[i + 2]-1];
+
+		bns::TriangleShape*ptr = new bns::TriangleShape(a, b, c);
+		//group_shape->AddChild();
+		ptr->Material.Specular = bns::ColorF(0.3f, 0.3f, 0.3f);
+		ptr->Material.Diffuse = bns::ColorF(0.9, 0.9, 0.9);
+		ptr->Material.Ambient = ambient_color;
+		ptr->SetTransform(bns::Mat4x4F::Translate(0.0f, 0.0f, -10.0f) * bns::Mat4x4F::Scale(0.1f, 0.1f, 0.1f));
+		scene.Shapes.push_back(ptr);
+	}
+
+	scene.Shapes.push_back(group_shape);
 }

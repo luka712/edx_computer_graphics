@@ -21,6 +21,7 @@ bns::Point4F bns::operator+(const Point4F& a, const Vec4F& b)
 	);
 }
 
+
 bns::Point4F bns::operator*(const Point4F& a, const Vec4F& b)
 {
 	return Point4F(
@@ -68,14 +69,6 @@ bns::Vec3F bns::operator*(Vec3F lhs, const bns::F32 scalar)
 {
 	lhs *= scalar;
 	return lhs;
-}
-
-bns::Vec3F bns::operator*(bns::F32 s, Vec3F v)
-{
-	v.X *= s;
-	v.Y *= s;
-	v.Z *= s;
-	return v;
 }
 
 bns::Mat3x3F bns::operator*(bns::F32 scalar, const bns::Mat3x3F& m)
@@ -192,62 +185,6 @@ bns::Vec3F bns::Normal(const TriangleF& tri)
 	return result;
 }
 
-bns::F32 bns::IntersectionDistanceRayTriangle(const bns::RayF& ray, const bns::TriangleF& triangle)
-{
-	bns::Vec3F origin = ray.Origin.ToVec3F();
-	bns::Vec3F direction = ray.Direction.ToVec3F();
-
-
-	// approach: Ray-Plane intersection, then check if inside a triangle
-	// ref: https://learning.edx.org/course/course-v1:UCSanDiegoX+CSE167x+2T2018/block-v1:UCSanDiegoX+CSE167x+2T2018+type@sequential+block@L9/block-v1:UCSanDiegoX+CSE167x+2T2018+type@vertical+block@vertical_9380d3229d4a
-	// ref: https://www.youtube.com/watch?v=EZXz-uPyCyA
-
-	// normal can be for any point, but let's use
-	// n = ((C-A)x(B-A)) / ||(C-A)x(B-A)||
-	bns::Vec3F normal = bns::Vec3F::Cross(triangle.C - triangle.A, triangle.B - triangle.A);
-	normal.Normalize();
-
-	// Plane equation, where . = dot product
-	// plane = P . n - A . n = 0
-	// Combine with ray equation, P_0 is ray position/origin, P_1_t is future ray position, direction with time t, so P1 is direction
-	// ray = P = P_0+ P_1_t
-	// (P_0 + P_1_t) . n = A . n
-	// So find t
-	// t = ((A . n) - (P_0 . n)) / (P_1 . n)
-
-	// first get (P_1 . n), if 0 there is no intersection,  since ray direction is orthogonal to the normal of direction
-	// which means ray direction line in the direction of a plane.
-	bns::F32 direction_dot_n = direction.Dot(normal);
-
-	if (Abs(direction_dot_n) < 0.00001f)
-	{
-		return bns::MAX_F32;
-	}
-
-	// so first part ((A . n) - (P_0 . n))
-	bns::F32 t = triangle.A.Dot(normal) - (origin.Dot(normal));
-	t /= direction_dot_n;
-
-	// Find if inside a triangle parametrically ( barycentric coordinates ). Useful for texture mapping as well
-	// Find alpha, beta , gamma where alpha is distance between intersection point and A
-	// beta is distance between intersection point and B, and gamma between intersection point and C
-	Vec3F intersection_point = (origin + direction * t);
-
-	Vec3F bc = triangle.BarycentricCoordinates(intersection_point);
-	// for barycentric coordinates point is on triangle if x+y+z == 1 , but account for floating point inprecision here
-	if (bc.X >= 0 && bc.X <= 1.0f
-		&& bc.Y >= 0 && bc.Y <= 1.0f
-		&& bc.Z >= 0 && bc.Z <= 1.0f)
-	{
-		if (Abs((bc.X + bc.Y + bc.Z) - 1.0f) < EPSILON)
-		{
-			return t;
-		}
-	}
-
-	return bns::MAX_F32;
-}
-
 void bns::IntersectionDistanceRaySphere(const RayF& ray, const SphereF& sphere, bns::F32* out_t1, bns::F32* out_t2)
 {
 	// ray = P0 + P1
@@ -261,7 +198,7 @@ void bns::IntersectionDistanceRaySphere(const RayF& ray, const SphereF& sphere, 
 	// ray to sphere (P0-C) , ignore W component here, it's not relevant
 	bns::Vec3F sphere_to_ray = ray.Origin.ToVec3F() - sphere.Position;
 
-	bns::Vec3F direction = ray.Direction.ToVec3F();
+	bns::Vec3F direction = ray.Direction;
 
 	bns::F32 a = direction.Dot(direction);
 	bns::F32 b = 2 * direction.Dot(sphere_to_ray);
@@ -316,7 +253,7 @@ bns::RayF bns::RayF::operator*=(const bns::Mat4x4F& m)
 bns::RayF bns::operator*(const bns::RayF& ray, const bns::Mat4x4F& m)
 {
 	// important, notice to ToVec3, ToVec4. Point has for W by default 1, while vec has 3 when casting.
-	bns::Vec4F dir = m * ray.Direction;
+	bns::Vec3F dir = m * ray.Direction;
 	bns::Point4F org = m * ray.Origin;
 
 	return bns::RayF(org, dir);
@@ -333,17 +270,12 @@ void bns::RayF::IntersectionDistanceWithSphere(const SphereF& sphere, bns::F32* 
 }
 
 bns::RayF::RayF(Point3F origin, Vec3F direction)
-	:Origin(origin.X, origin.Y, origin.Z, 1.0f), Direction(direction.X, direction.Y, direction.Z, 0.0f)
-{
-}
-
-bns::RayF::RayF(Point4F origin, Vec4F direction)
-	: Origin(origin), Direction(direction)
+	:Origin(origin.X, origin.Y, origin.Z, 1.0f), Direction(direction)
 {
 }
 
 bns::RayF::RayF(Point4F origin, Vec3F direction)
-	: Origin(origin), Direction(direction.ToVec4F())
+	: Origin(origin), Direction(direction)
 {
 }
 
@@ -453,7 +385,7 @@ bns::ColorF bns::operator*(const ColorF& col, bns::F32 scalar)
 bns::Vec3F bns::TriangleF::BarycentricCoordinates(bns::F32 x, bns::F32 y, bns::F32 z) const
 {
 	// https://www.youtube.com/watch?v=EZXz-uPyCyA
-			// https://gamedev.stackexchange.com/questions/23743/whats-the-most-efficient-way-to-find-barycentric-coordinates
+	// https://gamedev.stackexchange.com/questions/23743/whats-the-most-efficient-way-to-find-barycentric-coordinates
 	Vec3F v0 = B - A;
 	Vec3F v1 = C - A;
 	Vec3F v2 = Vec3F(x, y, z) - A;
@@ -466,11 +398,11 @@ bns::Vec3F bns::TriangleF::BarycentricCoordinates(bns::F32 x, bns::F32 y, bns::F
 
 	bns::F32 denom = d00 * d11 - d01 * d01;
 
-	bns::F32 b_y = (d11 * d20 - d01 * d21) / denom;
-	bns::F32 b_z = (d00 * d21 - d01 * d20) / denom;
-	bns::F32 b_x = 1.0f - b_y - b_z;
+	bns::F32 v = (d11 * d20 - d01 * d21) / denom;
+	bns::F32 w = (d00 * d21 - d01 * d20) / denom;
+	bns::F32 u = 1.0f - v - w;
 
-	return Vec3F(b_x, b_y, b_z);
+	return Vec3F(u, v, w);
 }
 
 bns::Vec3F bns::TriangleF::BarycentricCoordinates(const Vec3F& point) const
@@ -478,10 +410,6 @@ bns::Vec3F bns::TriangleF::BarycentricCoordinates(const Vec3F& point) const
 	return BarycentricCoordinates(point.X, point.Y, point.Z);
 }
 
-bns::Vec3F bns::TriangleF::GetNormal() const
-{
-	return Normal(*this);
-}
 
 bns::SphereF::SphereF() :
 	bns::SphereF(.0f, .0f, .0f, 1.0f)
@@ -631,7 +559,7 @@ bns::Mat2x2F bns::Mat3x3F::SubMatrix(U32 row, U32 col) const
 		{
 			if (r == row) continue;
 
-			// get value from mat4x4 and move it to appropriate 3x3 position. Be careful, [] returns pointer to places.
+			// get value from mat3x3 and move it to appropriate 2x2 position. Be careful, [] returns pointer to places.
 			*result[j * 2 + i] = this->AtIndex(r, c);
 			i++;
 		}
@@ -756,7 +684,6 @@ bns::Mat4x4F bns::Mat4x4F::Inverse(const bns::Mat4x4F& m)
 {
 	bns::Mat4x4F result = bns::Mat4x4F::Identity();
 
-	// TODO: 
 	bns::F32 d = m.Determinant();
 	for (U32 c = 0; c < 4; c++)
 	{
@@ -936,27 +863,6 @@ bns::Vec3F& bns::Vec3F::operator/=(const bns::F32 scalar)
 	return *this;
 }
 
-bns::F32 bns::Vec3F::Length() const
-{
-	bns::F32 result = X * X + Y * Y + Z * Z;
-	result = Sqrt(result);
-	return result;
-}
-
-void bns::Vec3F::Normalize()
-{
-	bns::F32 l = Length();
-	if (l > 0)
-	{
-		X /= l;
-		Y /= l;
-		Z /= l;
-	}
-	else
-	{
-		SetLengthToZero();
-	}
-}
 
 void bns::Vec3F::SetLengthToZero()
 {
@@ -975,17 +881,6 @@ bns::Point4F bns::Vec3F::ToPoint4F(bns::F32 w) const
 	return bns::Point4F(X, Y, Z, w);
 }
 
-bns::Vec3F bns::Vec3F::Cross(const Vec3F& a, const Vec3F& b)
-{
-	Vec3F result
-	{
-		a.Y * b.Z - b.Y * a.Z,
-		a.Z * b.X - b.Z * a.X,
-		a.X * b.Y - b.X * a.Y
-	};
-	return result;
-}
-
 inline bns::Vec3F bns::Vec3F::Normalize(const Vec3F& in)
 {
 	bns::F32 l = in.Length();
@@ -998,28 +893,6 @@ inline bns::Vec3F bns::Vec3F::Normalize(const Vec3F& in)
 	return result;
 }
 
-inline bns::F32 bns::Vec3F::Dot(const bns::Vec3F& a, const bns::Vec3F& b)
-{
-	bns::F32 result = a.X * b.X + a.Y * b.Y + a.Z * b.Z;
-	return result;
-}
-
-inline bns::Vec3F bns::Vec3F::Reflect(const Vec3F& v, const Vec3F& n)
-{
-	bns::F32 v_dot_n = bns::Vec3F::Dot(v, n);
-	bns::Vec3F result = v - 2 * v_dot_n * n;
-	return result;
-}
-
-bns::F32 bns::Vec3F::Dot(const Vec3F& other) const
-{
-	bns::F32 result = this->X * other.X +
-		this->Y * other.Y +
-		this->Z * other.Z;
-
-	return result;
-}
-
 bns::Vec3F bns::Vec3F::UnitZ()
 {
 	return { 0.0f, 0.0f, 1.0f };
@@ -1029,6 +902,62 @@ bns::Vec4F::Vec4F(bns::F32 x, bns::F32 y, bns::F32 z, bns::F32 w)
 	:X(x), Y(y), Z(z), W(w)
 {
 }
+
+
+
+
+#pragma region VEC 2
+
+bns::F32* bns::Vec2F::operator[](U32 index)
+{
+	// Get pointer to x and increase by index, then dereference
+	bns::F32* result = (&this->X + index);
+
+	return result;
+}
+
+#pragma endregion
+
+#pragma region VEC 3
+
+
+inline bns::Vec3F bns::Vec3F::Cross(const Vec3F& a, const Vec3F& b)
+{
+	Vec3F result
+	{
+		a.Y * b.Z - b.Y * a.Z,
+		a.Z * b.X - b.Z * a.X,
+		a.X * b.Y - b.X * a.Y
+	};
+	return result;
+}
+
+
+inline bns::F32 bns::Vec3F::Length() const
+{
+	bns::F32 result = X * X + Y * Y + Z * Z;
+	result = Sqrt(result);
+	return result;
+}
+
+inline void bns::Vec3F::Normalize()
+{
+	bns::F32 l = Length();
+	if (l > 0)
+	{
+		X /= l;
+		Y /= l;
+		Z /= l;
+	}
+	else
+	{
+		SetLengthToZero();
+	}
+}
+
+#pragma endregion
+
+#pragma region VEC 4
 
 bns::Vec4F::Vec4F()
 	: bns::Vec4F(0.0f, 0.0f, 0.0f, 0.0f)
@@ -1044,25 +973,41 @@ bns::F32 bns::Vec4F::Dot(const bns::Vec4F& v) const
 	return result;
 }
 
-bns::Vec3F bns::Reflect(const Vec3F& v, const Vec3F& n)
-{
-	return bns::Vec3F::Reflect(v, n);
-}
 
 bns::Vec3F bns::Vec4F::ToVec3F() const
 {
 	return bns::Vec3F(X, Y, Z);
 }
 
-bns::Point4F::Point4F(bns::F32 x, bns::F32 y, bns::F32 z, bns::F32 w)
-	: X(x), Y(y), Z(z), W(w)
+
+#pragma endregion
+
+#pragma region POINT 3F
+
+bns::Point3F::Point3F(bns::F32 x, bns::F32 y, bns::F32 z)
+	:X(x), Y(y), Z(z)
 {
 }
 
-bns::Point4F::Point4F()
-	: Point4F(0.0f, 0.0f, 0.0f, 0.0f)
+bns::Point3F::Point3F()
+	: bns::Point3F(0.0f, 0.0f, 0.0f)
 {
 }
+
+bns::Vec3F bns::Point3F::ToVec3F() const
+{
+	return bns::Vec3F(X, Y, Z);
+}
+
+#pragma endregion
+
+#pragma region POINT 4F
+
+bns::Point4F::Point4F(bns::F32 x, bns::F32 y, bns::F32 z, bns::F32 w)
+	: X(x), Y(y), Z(z), W(w) {}
+
+bns::Point4F::Point4F()
+	: Point4F(0.0f, 0.0f, 0.0f, 0.0f) {}
 
 bns::Vec4F bns::Point4F::ToVec4F() const
 {
@@ -1078,6 +1023,43 @@ bns::Vec3F bns::Point4F::ToVec3F() const
 {
 	return Vec3F(X, Y, Z);
 }
+
+bns::Point4F bns::operator+(const Point4F& a, const Vec3F& b)
+{
+	bns::Point4F result(
+		a.X + b.X,
+		a.Y + b.Y,
+		a.Z + b.Z,
+		a.W
+	);
+	return result;
+}
+
+
+#pragma endregion
+
+#pragma region MATH
+
+bns::F32 bns::Max(F32 a, F32 b)
+{
+	return a > b ? a : b;
+}
+
+bns::F32 bns::Min(F32 a, F32 b)
+{
+	return a < b ? a : b;
+}
+
+void bns::Swap(F32* a, F32* b)
+{
+	F32 temp = *a;
+	*a = *b;
+	*b = temp;
+}
+
+#pragma endregion
+
+#pragma region MATRIX 3x3
 
 bns::Mat3x3F::Mat3x3F()
 	:Mat3x3F(1.0f, 0.0f, 0.0f,
@@ -1104,52 +1086,95 @@ bns::F32* bns::Mat3x3F::operator[](U32 index)
 	return result;
 }
 
-bns::F32* bns::Vec2F::operator[](U32 index)
-{
-	// Get pointer to x and increase by index, then dereference
-	bns::F32* result = (&this->X + index);
-
-	return result;
-}
-
-bns::Point3F::Point3F(bns::F32 x, bns::F32 y, bns::F32 z)
-	:X(x), Y(y), Z(z)
-{
-}
-
-bns::Point3F::Point3F()
-	: bns::Point3F(0.0f, 0.0f, 0.0f)
-{
-}
-
-bns::Vec3F bns::Point3F::ToVec3F() const
-{
-	return bns::Vec3F(X, Y, Z);
-}
-
-bns::F32 bns::Max(F32 a, F32 b)
-{
-	return a > b ? a : b;
-}
-
-bns::F32 bns::Min(F32 a, F32 b)
-{
-	return a < b ? a : b;
-}
-
-void bns::Swap(F32* a, F32* b)
-{
-	F32 temp = *a;
-	*a = *b;
-	*b = temp;
-}
+#pragma endregion
 
 #pragma region MATRIX 4x4
 
 bns::Vec3F bns::operator*(const Mat4x4F& m, const Vec3F& v)
 {
-	bns::Vec4F result = m * v.ToVec4F();
-	return result.ToVec3F();
+	bns::Vec3F res;
+
+	res.X = m.R0C0 * v.X + m.R0C1 * v.Y + m.R0C2 * v.Z;
+
+	res.Y = m.R1C0 * v.X + m.R1C1 * v.Y + m.R1C2 * v.Z;
+
+	res.Z = m.R2C0 * v.X + m.R2C1 * v.Y + m.R2C2 * v.Z;
+
+	return res;
 }
 
 #pragma endregion
+
+#pragma region TRIANGLE F
+
+bns::TriangleF::TriangleF(bns::Vec3F a, bns::Vec3F b, bns::Vec3F c)
+	:A(a), B(b), C(c)
+{
+	Normal = bns::Normal(*this);
+}
+
+bns::F32 bns::IntersectionDistanceRayTriangle(const bns::RayF& ray, const bns::TriangleF& triangle)
+{
+	bns::Vec3F origin = ray.Origin.ToVec3F();
+	bns::Vec3F direction = ray.Direction;
+
+
+	// approach: Ray-Plane intersection, then check if inside a triangle
+	// ref: https://learning.edx.org/course/course-v1:UCSanDiegoX+CSE167x+2T2018/block-v1:UCSanDiegoX+CSE167x+2T2018+type@sequential+block@L9/block-v1:UCSanDiegoX+CSE167x+2T2018+type@vertical+block@vertical_9380d3229d4a
+	// ref: https://www.youtube.com/watch?v=EZXz-uPyCyA
+
+	// normal can be for any point, but let's use
+	// n = ((C-A)x(B-A)) / ||(C-A)x(B-A)||
+	// bns::Vec3F normal = bns::Vec3F::Cross(triangle.C - triangle.A, triangle.B - triangle.A); can be used as well, but let's just use triangle normal
+	bns::Vec3F normal = triangle.GetNormal();
+	// already normalized
+	//normal.Normalize();
+
+	// Plane equation, where . = dot product
+	// plane = P . n - A . n = 0
+	// Combine with ray equation, P_0 is ray position/origin, P_1_t is future ray position, direction with time t, so P1 is direction
+	// ray = P = P_0+ P_1_t
+	// (P_0 + P_1_t) . n = A . n
+	// So find t
+	// t = ((A . n) - (P_0 . n)) / (P_1 . n)
+
+	// first get (P_1 . n), if 0 there is no intersection,  since ray direction is orthogonal to the normal of direction
+	// which means ray direction line in the direction of a plane.
+	bns::F32 direction_dot_n = direction.Dot(normal);
+
+	if (Abs(direction_dot_n) < EPSILON)
+	{
+		return bns::MAX_F32;
+	}
+
+	// so first part ((A . n) - (P_0 . n))
+	bns::F32 t = triangle.A.Dot(normal) - (origin.Dot(normal));
+	t /= direction_dot_n;
+
+	// Find if inside a triangle parametrically ( barycentric coordinates ). Useful for texture mapping as well
+	// Find alpha, beta , gamma where alpha is distance between intersection point and A
+	// beta is distance between intersection point and B, and gamma between intersection point and C
+	Vec3F intersection_point = (origin + direction * t);
+
+	Vec3F bc = triangle.BarycentricCoordinates(intersection_point);
+	// for barycentric coordinates point is on triangle if x+y+z == 1 , but account for floating point inprecision here
+	if (bc.X >= 0 && bc.X <= 1.0f
+		&& bc.Y >= 0 && bc.Y <= 1.0f
+		&& bc.Z >= 0 && bc.Z <= 1.0f)
+	{
+		if (Abs((bc.X + bc.Y + bc.Z) - 1.0f) < EPSILON)
+		{
+			return t;
+		}
+	}
+
+	return bns::MAX_F32;
+}
+
+bns::Vec3F bns::TriangleF::GetNormal() const
+{
+	return this->Normal;
+}
+
+#pragma endregion
+

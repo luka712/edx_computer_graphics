@@ -1,5 +1,5 @@
 #Cornell Box
-size 900 900
+size 640 480
 #size 1280 960
 camera 0 1.5 5 0 1 0 0 1 0 65
 output scene6.png
@@ -35,6 +35,11 @@ specular 0.1 0.1 0.1
 translate 0 0 -13
 rotate 1 0 0 60
 plane
+popTransform
+
+# group start 
+pushTransform
+pushGroup
 popTransform
 
 # middle sphere
@@ -82,5 +87,8 @@ diffuse 0.96 0.95 0.05
 specular 0.4 0.4 0.4
 cylinder
 popTransform
+
+# group end
+popGroup
 
 popTransform

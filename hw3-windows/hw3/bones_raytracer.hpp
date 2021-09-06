@@ -11,28 +11,11 @@
 
 namespace bns
 {
-	/// <summary>
-	/// The camera struct.
-	/// </summary>
-	struct Camera
-	{
-		Vec3F LookFrom;
-		Vec3F LookAt;
-		Vec3F Up;
-		U32 ScreenWidth;
-		U32 ScreenHeight;
-		// Field of view 
-		F32 FOV;
+	struct Camera;
+}
 
-		Camera(bns::Vec3F look_from, bns::Vec3F look_at, bns::Vec3F up, F32 fov, U32 screen_width, U32 screen_height);
-
-		/// <summary>
-		/// Get the aspect ratio.
-		/// </summary>
-		F32 AspectRatio() const;
-		F32 FOVInRadians() const;
-	};
-
+namespace bns
+{
 	/// <summary>
 	/// Which type of shape. Use for casting to correct type.
 	/// </summary>
@@ -56,11 +39,11 @@ namespace bns
 		// Intersected shape
 		const BaseShape* Shape;
 
-		bns::Point4F RayOrigin;
+		bns::Vec4F RayOrigin;
 		bns::Vec3F RayDirection;
 
 		// Point of intersection
-		bns::Point4F LocalPoint;
+		bns::Vec4F LocalPoint;
 		bns::Point4F WorldPoint;
 		
 		bns::Vec3F Eye;
@@ -78,15 +61,17 @@ namespace bns
 
 #pragma region BASE SHAPE
 
+	struct GroupShape;
+	
 	struct BaseShape
 	{
-	private:
+	protected:
 		bns::Mat4x4F Transform;
 		bns::Mat4x4F InverseTransform;
 
 	public:
 		bns::Material Material;
-		bns::BaseShape* Parent;
+		bns::GroupShape* Parent;
 
 		BaseShape();
 
@@ -100,7 +85,7 @@ namespace bns
 		/// <summary>
 		/// Gets the normal
 		/// </summary>
-		virtual bns::Vec3F GetLocalNormalAt(bns::Point3F point) const = 0;
+		virtual bns::Vec3F GetLocalNormalAt(bns::Vec3F point) const = 0;
 
 		/// <summary>
 		/// Gets the transform matrix.
@@ -116,7 +101,11 @@ namespace bns
 		/// <summary>
 		/// Sets the transform matrix, also caches inverse transform matrix.
 		/// </summary>
-		void SetTransform(bns::Mat4x4F m);
+		inline void SetTransform(bns::Mat4x4F m)
+		{
+			Transform = m;
+			InverseTransform = bns::Mat4x4F::Inverse(m);
+		}
 	};
 
 #pragma endregion
@@ -129,11 +118,12 @@ namespace bns
 	struct TriangleShape : BaseShape
 	{
 		bns::TriangleF Triangle;
+		bns::Vec3F Normal;
 
-		TriangleShape();
+		TriangleShape(bns::Vec3F a, bns::Vec3F b, bns::Vec3F c);
 
 		void IntersectWithRay(const bns::RayF& ray, Intersections& fill_intersections) const override;
-		bns::Vec3F GetLocalNormalAt(bns::Point3F point) const override;
+		bns::Vec3F GetLocalNormalAt(bns::Vec3F point) const override;
 	};
 
 #pragma endregion
@@ -154,7 +144,7 @@ namespace bns
 		/// <summary>
 		/// Gets the local normal of shape at passed point.
 		/// </summary>
-		bns::Vec3F GetLocalNormalAt(bns::Point3F point) const override;
+		bns::Vec3F GetLocalNormalAt(bns::Vec3F point) const override;
 	};
 
 #pragma endregion
@@ -170,7 +160,7 @@ namespace bns
 		/// </summary>
 		void CheckAxis(F32 origin, F32 direction, F32* tmin, F32* tmax) const;
 		void IntersectWithRay(const bns::RayF& ray, Intersections& fill_intersections) const override;
-		bns::Vec3F GetLocalNormalAt(bns::Point3F point) const override;
+		bns::Vec3F GetLocalNormalAt(bns::Vec3F point) const override;
 	};
 
 #pragma endregion
@@ -180,7 +170,7 @@ namespace bns
 	struct PlaneShape : BaseShape
 	{
 		void IntersectWithRay(const RayF& ray, Intersections& fill_intersections) const override;
-		Vec3F GetLocalNormalAt(bns::Point3F point) const override;
+		Vec3F GetLocalNormalAt(bns::Vec3F point) const override;
 	};
 
 #pragma endregion
@@ -198,7 +188,7 @@ namespace bns
 
 		CylinderShape();
 		void IntersectWithRay(const RayF& ray, Intersections& fill_intersections) const override;
-		Vec3F GetLocalNormalAt(bns::Point3F point) const override;
+		Vec3F GetLocalNormalAt(bns::Vec3F point) const override;
 
 	private:
 		/// <summary>
@@ -221,9 +211,22 @@ namespace bns
 
 #pragma region GROUP SHAPE
 
-	class Group : public BaseShape
+	struct GroupShape : BaseShape
 	{
+		std::vector<BaseShape*> Children;
 
+		~GroupShape();
+
+		/// <summary>
+		/// Adds a child to GroupShape.
+		/// 
+		/// NOTE: when child is passed ownership is passed as well,
+		/// as GroupShape destructor will call deallocate on child object.
+		/// </summary>
+		void AddChild(BaseShape* shape);
+
+		void IntersectWithRay(const RayF& ray, Intersections& fill_intersections) const override;
+		Vec3F GetLocalNormalAt(bns::Vec3F point) const override;
 	};
 
 #pragma endregion
@@ -257,14 +260,16 @@ namespace bns
 	/// </summary>
 	struct Intersections
 	{
-		U32 CurrentIntersectionCount;
-		// TODO: optimize this number, or maybe dynamic array ? 
-		// TODO: Move these to heap!!!!
-		Intersection IntersectionsArray[10000];
+		// Intersection is rather small, no need to heap allocate, just use object directly.
+		std::vector<Intersection> IntersectionsArray;
 
 		Intersections();
 
+		/// <summary>
+		/// Adds intersection to array.
+		/// </summary>
 		void Add(Intersection intersection);
+
 		/// <summary>
 		/// Gets the pointer intersection with minimal distance if present.
 		/// </summary>
@@ -274,7 +279,7 @@ namespace bns
 	/// <summary>
 	/// The raytracer scene.
 	/// </summary>
-	struct RayTracerScene
+	struct RaytracerScene
 	{
 		std::vector<Camera> Cameras;
 		std::vector<BaseShape*> Shapes;
@@ -351,7 +356,7 @@ namespace bns
 		I32 remaining);
 
 	/// <summary>
-	/// Returns boolean expressions which says if point in space is directly blocked by other object from light source.
+	/// Returns boolean expressions which says if point in space is directly blocked by other object from light source. 
 	/// Determines if object is in shadow or not.
 	/// </summary>
 	bool IsShadowed(const Computations& comp, const BaseLight& light, bns::BaseShape** shapes, U32 count_of_shapes);

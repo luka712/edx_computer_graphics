@@ -135,7 +135,7 @@ namespace bns
 	/// </summary>
 	inline F32 Radians(F32 degrees)
 	{
-		F32 result = (degrees * PI) / 180;
+		F32 result = (degrees * PI) / 180.0f;
 		return result;
 	}
 
@@ -226,6 +226,8 @@ namespace bns
 		Vec3F ToVec3F() const;
 	};
 
+#pragma region POINT 4F
+
 	/// <summary>
 	/// The structure for representing a simple point with F32 components.
 	/// </summary>
@@ -257,8 +259,14 @@ namespace bns
 
 		friend Point4F operator+(const Point4F& a, const Point4F& b);
 		friend Point4F operator+(const Point4F& a, const Vec4F& b);
+		friend Point4F operator+(const Point4F& a, const Vec3F& b);
+		
 		friend Point4F operator*(const Point4F& a, const Vec4F& b);
 	};
+
+#pragma endregion
+
+	
 
 	/// <summary>
 	/// The Vec2 struct, which has components X and Y as F32 
@@ -659,7 +667,13 @@ namespace bns
 		/// <summary>
 		/// Multiplication by scalar.
 		/// </summary>
-		inline friend Vec3F operator* (F32 s, Vec3F v);
+		inline friend Vec3F operator* (F32 s, Vec3F v)
+		{
+			v.X *= s;
+			v.Y *= s;
+			v.Z *= s;
+			return v;
+		}
 
 		/// <summary>
 		/// Get length or magnitude of a vector.
@@ -704,18 +718,30 @@ namespace bns
 		/// <summary>
 		/// The dot product of two vectors.
 		/// </summary>
-		inline static F32 Dot(const bns::Vec3F& a, const bns::Vec3F& b);
+		inline static F32 Dot(const bns::Vec3F& a, const bns::Vec3F& b)
+		{
+			bns::F32 result = a.X * b.X + a.Y * b.Y + a.Z * b.Z;
+			return result;
+		}
 
 		/// <summary>
 		/// Reflect vector v around normal n.
 		/// </summary>
-		inline static Vec3F Reflect(const Vec3F& v, const Vec3F& n);
+		inline static Vec3F Reflect(const Vec3F& v, const Vec3F& n)
+		{
+			bns::F32 v_dot_n = bns::Vec3F::Dot(v, n);
+			bns::Vec3F result = v - 2 * v_dot_n * n;
+			return result;
+		}
 
 		/// <summary>
 		/// Dot product of two vectors.
 		/// a.x * b.x + a.y * b.y + a.z * b.z
 		/// </summary>
-		inline F32 Dot(const Vec3F& other) const;
+		inline F32 Dot(const Vec3F& other) const
+		{
+			return bns::Vec3F::Dot(*this, other);
+		}
 	
 
 		/// <summary>
@@ -951,7 +977,7 @@ namespace bns
 
 		/// <summary>
 		/// Multiply matrix by 3x1 vector. While this is invalid operation with matrices,
-		/// here vec3 is simply casted to vec4 with w component being set to 0.
+		/// here vec3 is simply considered to be vec4 with w component being set to 0.
 		/// </summary>
 		friend Vec3F operator*(const Mat4x4F& m, const Vec3F& v);
 
@@ -964,7 +990,6 @@ namespace bns
 		/// Multiply matrix by a point.
 		/// </summary>
 		friend Point4F operator*(const Mat4x4F& m, const Point4F& v);
-
 
 		/// <summary>
 		/// Multiply two matrices.
@@ -1042,8 +1067,6 @@ namespace bns
 #pragma endregion
 
 
-
-
 	/// <summary>
 	/// Structure for representing a simple point with I32 components.
 	/// </summary>
@@ -1089,18 +1112,9 @@ namespace bns
 		Vec3F B;
 		Vec3F C;
 
-		TriangleF(Vec3F a, Vec3F b, Vec3F c)
-			:A(a), B(b), C(c)
-		{
+		bns::Vec3F Normal;
 
-		}
-
-		TriangleF()
-		{
-			A = bns::Vec3F::Zero();
-			B = bns::Vec3F::Zero();
-			C = bns::Vec3F::Zero();
-		}
+		TriangleF(Vec3F a, Vec3F b, Vec3F c);
 
 		/// <summary>
 		/// Gets the vector that contains barycentric coordinates of a triangle from a point.
@@ -1146,10 +1160,9 @@ namespace bns
 	struct RayF
 	{
 		Point4F Origin;
-		Vec4F Direction;
+		Vec3F Direction;
 
 		RayF(Point3F origin, Vec3F direction);
-		RayF(Point4F origin, Vec4F direction);
 		RayF(Point4F origin, Vec3F direction);
 
 		bns::RayF operator *=(const bns::Mat4x4F& m);
@@ -1200,9 +1213,12 @@ namespace bns
 	Vec3F Normalize(const Vec3F& v);
 
 	/// <summary>
-	/// Reflect the vector over normal.
+	/// Reflect vector v around normal n.
 	/// </summary>
-	Vec3F Reflect(const bns::Vec3F& v, const bns::Vec3F& n);
+	inline Vec3F Reflect(const Vec3F& v, const Vec3F& n)
+	{
+		return bns::Vec3F::Reflect(v, n);
+	}
 
 	/// <summary>
 	/// The dot product of two vectors.

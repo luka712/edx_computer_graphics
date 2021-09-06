@@ -1,0 +1,16 @@
+# Test triangle with ambient color being set to 1
+size 640 480
+# defaut camera 
+camera 0 0 2 0 0 0 0 1 0 60
+output triangle-ambient.png
+
+ambient 1 0 0
+
+# triangle  
+pushTransform
+vertex -0.5 -0.4 0.0
+vertex 0.0 0.4 0.0
+vertex 0.5 -0.4 0.0
+tri 0 1 2
+popTransform
+

@@ -3,23 +3,9 @@
 #include <thread>
 #include <vector>
 #include <list>
+#include <algorithm>    
+#include "bones_scene_common.hpp"
 
-bns::Camera::Camera(bns::Vec3F look_from, bns::Vec3F look_at, bns::Vec3F up, bns::F32 fov, bns::U32 screen_width, bns::U32 screen_height)
-	: LookFrom(look_from), LookAt(look_at), Up(up), FOV(fov), ScreenWidth(screen_width), ScreenHeight(screen_height)
-{
-}
-
-bns::F32 bns::Camera::AspectRatio() const
-{
-	bns::F32 result = static_cast<bns::F32>(ScreenWidth) / static_cast<bns::F32>(ScreenHeight);
-	return result;
-}
-
-bns::F32 bns::Camera::FOVInRadians() const
-{
-	bns::F32 result = bns::Radians(FOV);
-	return result;
-}
 
 bns::RayF bns::RayThroughPixel(Camera cam, I32 pixel_x, I32 pixel_y)
 {
@@ -37,15 +23,14 @@ bns::RayF bns::RayThroughPixel(Camera cam, I32 pixel_x, I32 pixel_y)
 	bns::Vec3F center = cam.LookAt;
 	bns::Vec3F Up = cam.Up;
 
-	bns::Vec3F a = eye - center;
-	bns::Vec3F w = bns::Vec3F::Normalize(a);
+	// skip a, just use eye - center instead of a
+	bns::Vec3F w = eye - center;
+	w.Normalize();
 
 	bns::Vec3F b = bns::Vec3F::Normalize(Up);
 
-	bns::Vec3F b_cross_w = bns::Vec3F::Cross(b, w);
-	bns::Vec3F b_cross_w_unit = bns::Vec3F::Normalize(b_cross_w);
-
-	bns::Vec3F u = b_cross_w_unit;
+	bns::Vec3F u = bns::Vec3F::Cross(b, w);
+	u.Normalize();
 
 	bns::Vec3F v = bns::Vec3F::Cross(w, u);
 
@@ -55,17 +40,14 @@ bns::RayF bns::RayThroughPixel(Camera cam, I32 pixel_x, I32 pixel_y)
 	bns::F32 _i = pixel_x + 0.5f;
 	bns::F32 _j = pixel_y + 0.5f;
 
-	bns::F32 fov = cam.FOVInRadians();
-
 	// https://computergraphics.stackexchange.com/questions/8479/how-to-calculate-ray
-	bns::F32 half_view = bns::Tan(fov / 2.0f);
+	bns::F32 half_view = bns::Tan(cam.FOVRadians / 2.0f);
 
-	bns::F32 aspect_ratio = cam.AspectRatio();
 
 	// TODO: fix for aspect ration
 	// in this assignemnt x is wider, therefore fix alpha, otherwise beta is to be fixed.
 
-	bns::F32 alpha = half_view * aspect_ratio * ((_i - half_w) / half_w);
+	bns::F32 alpha = half_view * cam.AspectRatio * ((_i - half_w) / half_w);
 	bns::F32 beta = half_view * ((half_h - _j) / half_h);
 
 	bns::Vec3F dir = u * alpha + v * beta - w;
@@ -87,10 +69,8 @@ bns::Intersections bns::GetIntersections(const bns::RayF& ray, bns::BaseShape** 
 	{
 		const BaseShape* shape = Shapes[i];
 
-		bns::RayF transformed_ray = ray * shape->GetInverseTransform();
-
 		// Note that intersections are passed and filled in intersection distance
-		shape->IntersectWithRay(transformed_ray, result);
+		shape->IntersectWithRay(ray, result);
 	}
 
 	return result;
@@ -142,17 +122,16 @@ bns::ColorF bns::ColorAt(const bns::RayF& ray,
 }
 
 // Local function
-void RayTraceFromToHorizontalLine(bns::U32 start_from_line, bns::U32 end_on_line, const bns::Camera& cam, bns::BaseShape** shapes, bns::U32 count_of_shapes, bns::BaseLight** lights, bns::U32 count_of_lights, bns::ColorF** colors_to_fill)
+void RayTraceBlock(bns::U32 x_start, bns::U32 x_end, bns::U32 y_start, bns::U32 y_end, const bns::Camera& cam, bns::BaseShape** shapes, bns::U32 count_of_shapes, bns::BaseLight** lights, bns::U32 count_of_lights, bns::ColorF** colors_to_fill)
 {
-	for (bns::U32 j = start_from_line; j < end_on_line; j++)
+	for (bns::U32 y = y_start; y < y_end; y++)
 	{
-		bns::F32 percent = static_cast<bns::F32>(j - start_from_line) / static_cast<bns::F32>(end_on_line - start_from_line) * 100.0f;
+		bns::F32 p = bns::Map(y, y_start, y_end, 0.0f, 100.0f);
+		std::cout << static_cast<bns::I32>(p) << "%" << std::endl;
 
-		std::cout << static_cast<bns::I32>(percent) << "/" << 100 << std::endl;
-		for (size_t i = 0; i < cam.ScreenWidth; i++)
+
+		for (bns::U32 x = x_start; x < x_end; x++)
 		{
-			//std::cout << i << "/" << cam.ScreenWidth << std::endl;
-
 			// recursive ray tracing 
 			// A: Trace primary eye ray, find intersection
 			// B: Trace secondary shadow rays to all lights. Color = Visible ? Illumination Model : 0
@@ -160,29 +139,53 @@ void RayTraceFromToHorizontalLine(bns::U32 start_from_line, bns::U32 end_on_line
 
 
 			// 1. The primary ray. 
-			bns::RayF primary_ray = bns::RayThroughPixel(cam, i, j);
+			bns::RayF primary_ray = bns::RayThroughPixel(cam, x, y);
 
 			bns::ColorF color = ColorAt(primary_ray, shapes, count_of_shapes, lights, count_of_lights, 5);
 			color.A = 1.0f;
 
 			// B and C step inside color at.
-			colors_to_fill[j][i] = color;
+			colors_to_fill[y][x] = color;
 		}
 	}
 }
 
 void bns::ThreadedRayTrace(const Camera& cam, bns::BaseShape** shapes, bns::U32 count_of_shapes, bns::BaseLight** lights, bns::U32 count_of_lights, bns::ColorF** colors_to_fill)
 {
-	std::thread threads[10];
 
-	bns::U32 increment = cam.ScreenHeight / 10;
+#define BNS_THREADED_RAY_TRACE_THREAD_COUNT 16
+
+	std::thread threads[BNS_THREADED_RAY_TRACE_THREAD_COUNT];
+
+	U32 block_divider = Sqrt(BNS_THREADED_RAY_TRACE_THREAD_COUNT);
+
+	U32 x_step = cam.ScreenWidth / block_divider;
+	U32 y_step = cam.ScreenHeight / block_divider;
+
 	bns::U32 thread_index = 0;
-	for (bns::U32 i = 0; i < cam.ScreenHeight; i += increment)
+	for (bns::U32 y = 0; y < cam.ScreenHeight; y += y_step)
 	{
-		threads[thread_index++] = std::thread(RayTraceFromToHorizontalLine, i, i + increment, cam, shapes, count_of_shapes, lights, count_of_lights, colors_to_fill);
+		for (bns::U32 x = 0; x < cam.ScreenWidth; x += x_step)
+		{
+			U32 x_end = x + x_step;
+			U32 y_end = y + y_step;
+
+			if (x_end > cam.ScreenWidth)
+			{
+				x_end = cam.ScreenWidth;
+			}
+			if (y_end > cam.ScreenHeight)
+			{
+				y_end = cam.ScreenHeight;
+			}
+
+			//std::cout << "x: " << x << ", " << x_end << std::endl;
+			//std::cout << "y: " << y << ", " << y_end << std::endl;
+			threads[thread_index++] = std::thread(RayTraceBlock, x, x_end, y, y_end, cam, shapes, count_of_shapes, lights, count_of_lights, colors_to_fill);
+		}
 	}
 
-	for (size_t i = 0; i < 10; i++)
+	for (size_t i = 0; i < BNS_THREADED_RAY_TRACE_THREAD_COUNT; i++)
 	{
 		threads[i].join();
 	}
@@ -221,12 +224,12 @@ bns::Computations bns::PrepareComputations(const Intersection& intersection, con
 
 	result.T = intersection.TMinDist;
 	result.Shape = intersection.HitShape;
-	result.RayOrigin = ray.Origin;
-	result.RayDirection = ray.Direction.ToVec3F();
+	result.RayOrigin = ray.Origin.ToVec4F();
+	result.RayDirection = ray.Direction;
 	result.WorldPoint = (ray.Origin + ray.Direction * intersection.TMinDist);
-	result.LocalPoint = WorldPointToLocalPoint(*result.Shape, result.WorldPoint);
-	result.Eye = (ray.Direction * -1.0f).ToVec3F();
-	result.LocalNormal = result.Shape->GetLocalNormalAt(result.LocalPoint.ToPoint3F());
+	result.LocalPoint = WorldPointToLocalPoint(*result.Shape, result.WorldPoint).ToVec4F();
+	result.Eye = ray.Direction * -1.0f;
+	result.LocalNormal = result.Shape->GetLocalNormalAt(result.LocalPoint.ToVec3F());
 	result.LocalNormal.Normalize();
 	result.WorldNormal = GetWorldNormalAt(*result.Shape, result.LocalNormal);
 	result.WorldNormal.Normalize();
@@ -236,13 +239,13 @@ bns::Computations bns::PrepareComputations(const Intersection& intersection, con
 		result.WorldNormal = result.WorldNormal * -1.0f;
 	}
 
-	result.ReflectedVector = bns::Reflect(ray.Direction.ToVec3F(), result.WorldNormal);
+	result.ReflectedVector = bns::Reflect(ray.Direction, result.WorldNormal);
 
 	bns::U32 containers_index = 0;
 	// Replace with custom array.
 	std::list<const BaseShape*> container;
 
-	for (bns::U32 i = 0; i < other.CurrentIntersectionCount; i++)
+	for (bns::U32 i = 0; i < other.IntersectionsArray.size(); i++)
 	{
 		const Intersection& _i = other.IntersectionsArray[i];
 
@@ -569,75 +572,21 @@ void bns::FreePixels(void* pixels)
 	free(pixels);
 }
 
-
-bns::BaseShape::BaseShape()
-{
-	Material = {};
-	Transform = bns::Mat4x4F::Identity();
-	Parent = nullptr;
-}
-
-const bns::Mat4x4F& bns::BaseShape::GetTransform() const
-{
-	return Transform;
-}
-
-const bns::Mat4x4F& bns::BaseShape::GetInverseTransform() const
-{
-	return this->InverseTransform;
-}
-
-void bns::BaseShape::SetTransform(bns::Mat4x4F m)
-{
-	Transform = m;
-	InverseTransform = bns::Mat4x4F::Inverse(m);
-}
-
-
-bns::TriangleShape::TriangleShape()
-{
-	Triangle = bns::TriangleF();
-}
-
-void bns::TriangleShape::IntersectWithRay(const bns::RayF& ray, Intersections& fill_intersections) const
-{
-	bns::F32 result = ray.IntersectionDistanceWithTriangle(this->Triangle);
-
-	if (result != bns::MAX_F32)
-	{
-		Intersection i;
-		i.TMinDist = result;
-		i.HitShape = this;
-		i.Type = ShapeType::Triangle;
-		fill_intersections.Add(i);
-	}
-}
-
-bns::Vec3F bns::TriangleShape::GetLocalNormalAt(bns::Point3F point) const
-{
-	bns::Vec3F result = this->Triangle.GetNormal();
-	return result;
-}
-
+#pragma region INTERSECTION
 
 bns::Intersections::Intersections()
 {
-	CurrentIntersectionCount = 0;
 }
 
 void bns::Intersections::Add(Intersection intersection)
 {
-	// TODO: move out of here. this will fail at some point, do increase count of intersections if neccessary.
-	IntersectionsArray[CurrentIntersectionCount].HitShape = intersection.HitShape;
-	IntersectionsArray[CurrentIntersectionCount].TMinDist = intersection.TMinDist;
-	IntersectionsArray[CurrentIntersectionCount].Type = intersection.Type;
-	CurrentIntersectionCount++;
+	IntersectionsArray.push_back(intersection);
 }
 
 bns::Intersection* bns::Intersections::Hit()
 {
 	I32 min_hit_index = -1;
-	for (I32 i = 0; i < static_cast<I32>(CurrentIntersectionCount); i++)
+	for (I32 i = 0; i < IntersectionsArray.size(); i++)
 	{
 		if (this->IntersectionsArray[i].TMinDist > 0.0f)
 		{
@@ -670,12 +619,66 @@ bns::Intersection bns::Intersection::operator=(const Intersection& other)
 	return i;
 }
 
+#pragma endregion
+
+#pragma region BASE SHAPE
+
+bns::BaseShape::BaseShape()
+{
+	Material = {};
+	Transform = bns::Mat4x4F::Identity();
+	Parent = nullptr;
+}
+
+inline const bns::Mat4x4F& bns::BaseShape::GetTransform() const
+{
+	return Transform;
+}
+
+inline const bns::Mat4x4F& bns::BaseShape::GetInverseTransform() const
+{
+	return this->InverseTransform;
+}
+
+#pragma endregion
+
+#pragma region TRIANGLE SHAPE
+
+bns::TriangleShape::TriangleShape(bns::Vec3F a, bns::Vec3F b, bns::Vec3F c)
+	:Triangle(a, b, c)
+{
+	Normal = Triangle.GetNormal();
+}
+
+void bns::TriangleShape::IntersectWithRay(const bns::RayF& ray, Intersections& fill_intersections) const
+{
+	bns::RayF inverse_ray = ray * this->InverseTransform;
+	bns::F32 result = inverse_ray.IntersectionDistanceWithTriangle(this->Triangle);
+
+	if (result != bns::MAX_F32)
+	{
+		Intersection i;
+		i.TMinDist = result;
+		i.HitShape = this;
+		i.Type = ShapeType::Triangle;
+		fill_intersections.Add(i);
+	}
+}
+
+bns::Vec3F bns::TriangleShape::GetLocalNormalAt(bns::Vec3F point) const
+{
+	return Normal;
+}
+
+#pragma endregion
+
 #pragma region SPHERE SHAPE  
 
 void bns::SphereShape::IntersectWithRay(const bns::RayF& ray, Intersections& fill_intersections) const
 {
 	bns::F32 t1, t2;
-	ray.IntersectionDistanceWithSphere(this->Sphere, &t1, &t2);
+	bns::RayF inverse_ray = ray * this->InverseTransform;
+	inverse_ray.IntersectionDistanceWithSphere(this->Sphere, &t1, &t2);
 
 	if (t1 != bns::INFINITY_F32)
 	{
@@ -696,9 +699,9 @@ void bns::SphereShape::IntersectWithRay(const bns::RayF& ray, Intersections& fil
 	}
 }
 
-bns::Vec3F bns::SphereShape::GetLocalNormalAt(bns::Point3F point) const
+bns::Vec3F bns::SphereShape::GetLocalNormalAt(bns::Vec3F point) const
 {
-	return point.ToVec3F();
+	return point;
 }
 
 bns::SphereShape::SphereShape()
@@ -712,13 +715,14 @@ bns::SphereShape::SphereShape()
 
 void bns::PlaneShape::IntersectWithRay(const RayF& ray, Intersections& fill_intersections) const
 {
+	bns::RayF inverse_ray = ray * this->InverseTransform;
 	if (Abs(ray.Direction.Y) < EPSILON)
 	{
 		return;
 	}
 
-	F32 t = -ray.Origin.Y / ray.Direction.Y;
-	
+	F32 t = -inverse_ray.Origin.Y / inverse_ray.Direction.Y;
+
 	Intersection i;
 	i.TMinDist = t;
 	i.HitShape = this;
@@ -726,7 +730,7 @@ void bns::PlaneShape::IntersectWithRay(const RayF& ray, Intersections& fill_inte
 	fill_intersections.Add(i);
 }
 
-bns::Vec3F bns::PlaneShape::GetLocalNormalAt(bns::Point3F point) const
+bns::Vec3F bns::PlaneShape::GetLocalNormalAt(bns::Vec3F point) const
 {
 	return Vec3F(0.0f, 1.0f, 0.0f);
 }
@@ -763,7 +767,7 @@ void bns::CubeShape::CheckAxis(F32 origin, F32 direction, F32* tmin, F32* tmax) 
 	}
 }
 
-bns::Vec3F bns::CubeShape::GetLocalNormalAt(bns::Point3F point) const
+bns::Vec3F bns::CubeShape::GetLocalNormalAt(bns::Vec3F point) const
 {
 	F32 abs_x = Abs(point.X);
 	F32 abs_y = Abs(point.Y);
@@ -786,10 +790,12 @@ bns::Vec3F bns::CubeShape::GetLocalNormalAt(bns::Point3F point) const
 
 void bns::CubeShape::IntersectWithRay(const bns::RayF& ray, Intersections& fill_intersections) const
 {
+	bns::RayF inverse_ray = ray * this->InverseTransform;
+
 	F32 xtmin, xtmax, ytmin, ytmax, ztmin, ztmax;
-	CheckAxis(ray.Origin.X, ray.Direction.X, &xtmin, &xtmax);
-	CheckAxis(ray.Origin.Y, ray.Direction.Y, &ytmin, &ytmax);
-	CheckAxis(ray.Origin.Z, ray.Direction.Z, &ztmin, &ztmax);
+	CheckAxis(inverse_ray.Origin.X, inverse_ray.Direction.X, &xtmin, &xtmax);
+	CheckAxis(inverse_ray.Origin.Y, inverse_ray.Direction.Y, &ytmin, &ytmax);
+	CheckAxis(inverse_ray.Origin.Z, inverse_ray.Direction.Z, &ztmin, &ztmax);
 
 	F32 tmin = bns::Max(xtmin, bns::Max(ytmin, ztmin));
 	F32 tmax = bns::Min(xtmax, bns::Min(ytmax, ztmax));
@@ -829,7 +835,7 @@ bns::CylinderShape::CylinderShape()
 	Capped = true;
 }
 
-bool bns::CylinderShape::CheckCap(const RayF& ray, F32 t) const 
+bool bns::CylinderShape::CheckCap(const RayF& ray, F32 t) const
 {
 	F32 x = ray.Origin.X + t * ray.Direction.X;
 	F32 z = ray.Origin.Z + t * ray.Direction.Z;
@@ -869,16 +875,18 @@ void bns::CylinderShape::IntersectCaps(const RayF& ray, Intersections& fill_inte
 
 void bns::CylinderShape::IntersectWithRay(const RayF& ray, Intersections& fill_intersections) const
 {
-	F32 a = Pow(ray.Direction.X) + Pow(ray.Direction.Z);
+	bns::RayF inverse_ray = ray * this->InverseTransform;
+
+	F32 a = Pow(inverse_ray.Direction.X) + Pow(inverse_ray.Direction.Z);
 
 	// ray is parallel to y axis, therefore ray is missing the cylinder
 	if (Abs(a) < EPSILON) return;
 
-	F32 b = 2.0f * ray.Origin.X * ray.Direction.X + 2.0f * ray.Origin.Z * ray.Direction.Z;
-	F32 c = Pow(ray.Origin.X) + Pow(ray.Origin.Z) - 1.0f;
+	F32 b = 2.0f * inverse_ray.Origin.X * inverse_ray.Direction.X + 2.0f * inverse_ray.Origin.Z * inverse_ray.Direction.Z;
+	F32 c = Pow(inverse_ray.Origin.X) + Pow(inverse_ray.Origin.Z) - 1.0f;
 
 	F32 disc = Pow(b) - 4 * a * c;
-	
+
 	// ray does not intersect the cylinder
 	if (disc < 0.0f) return;
 
@@ -888,12 +896,12 @@ void bns::CylinderShape::IntersectWithRay(const RayF& ray, Intersections& fill_i
 	F32 t0 = (-b - disc) / deno;
 	F32 t1 = (-b + disc) / deno;
 
-	if (t0 > t1) 
+	if (t0 > t1)
 	{
 		Swap(&t0, &t1);
 	}
 
-	F32 y0 = ray.Origin.Y + t0 * ray.Direction.Y;
+	F32 y0 = inverse_ray.Origin.Y + t0 * inverse_ray.Direction.Y;
 	if (Minimum < y0 && y0 < Maximum)
 	{
 		Intersection i0;
@@ -903,7 +911,7 @@ void bns::CylinderShape::IntersectWithRay(const RayF& ray, Intersections& fill_i
 		fill_intersections.Add(i0);
 	}
 
-	F32 y1 = ray.Origin.Y + t1 * ray.Direction.Y;
+	F32 y1 = inverse_ray.Origin.Y + t1 * inverse_ray.Direction.Y;
 	if (Minimum < y1 && y1 < Maximum)
 	{
 		Intersection i1;
@@ -915,11 +923,11 @@ void bns::CylinderShape::IntersectWithRay(const RayF& ray, Intersections& fill_i
 
 	if (this->Capped)
 	{
-		this->IntersectCaps(ray, fill_intersections);
+		this->IntersectCaps(inverse_ray, fill_intersections);
 	}
 }
 
-bns::Vec3F bns::CylinderShape::GetLocalNormalAt(bns::Point3F point) const
+bns::Vec3F bns::CylinderShape::GetLocalNormalAt(bns::Vec3F point) const
 {
 	// sqaure of the distance from y axis
 	F32 dist = Pow(point.X) + Pow(point.Z);
@@ -937,6 +945,51 @@ bns::Vec3F bns::CylinderShape::GetLocalNormalAt(bns::Point3F point) const
 }
 
 #pragma endregion
+
+#pragma region GROUP SHAPE
+
+bns::GroupShape::~GroupShape()
+{
+	for (auto it = Children.begin(); it != Children.end(); ++it)
+	{
+		delete* it;
+	}
+}
+
+void bns::GroupShape::AddChild(BaseShape* shape)
+{
+	shape->Parent = this;
+	Children.push_back(shape);
+}
+
+/// <summary>
+/// Note that this is helper function and does not belong anywhere except in IntersectWithRay of GroupShape
+/// </summary>
+bool SortIntersections(const bns::Intersection& a, const bns::Intersection& b)
+{
+	return a.TMinDist < b.TMinDist;
+}
+
+void bns::GroupShape::IntersectWithRay(const RayF& ray, Intersections& fill_intersections) const
+{
+	bns::RayF inverse_ray = ray * this->InverseTransform;
+	for (auto it = Children.begin(); it != Children.end(); ++it)
+	{
+		(*it)->IntersectWithRay(inverse_ray, fill_intersections);
+	}
+
+	std::sort(fill_intersections.IntersectionsArray.begin(), fill_intersections.IntersectionsArray.end(), SortIntersections);
+
+	return;
+}
+
+bns::Vec3F bns::GroupShape::GetLocalNormalAt(bns::Vec3F point) const
+{
+	return point;
+}
+
+#pragma endregion
+
 
 #pragma region SHAPE HELPERS
 

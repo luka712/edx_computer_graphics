@@ -11,7 +11,13 @@ namespace bns
 	/// <summary>
 	/// Load the scene from .bns file format which is native to bns library.
 	/// </summary>
-	void LoadSceneFromBnsFileFormat(const char* filename, RayTracerScene& scene);
+	void LoadRaytracerSceneFromBnsFileFormat(const char* filename, RaytracerScene& scene);
+
+	/// <summary>
+	/// Load the scene from .obj file format ( wavefront)
+	/// </summary>
+	void LoadSceneFromObjFileFormat(const char* filename, RaytracerScene& scene);
+
 }
 
 #endif // !BONES_LOADERS_H

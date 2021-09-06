@@ -16,6 +16,7 @@
 #include "include/FreeImage.h"
 #include "bones_lights.hpp"
 #include "bones_loaders.hpp"
+#include "bones_scene_common.hpp"
 
 
 void saveScreenshot(std::string fname, void* pixels, bns::I32 w, bns::I32 h)
@@ -85,19 +86,27 @@ int main()
 	FreeImage_DeInitialise();
 
 #else 
+	FreeImage_Initialise(0);
 
 	bns::I32 _index = 1;
 
-	bns::RayTracerScene renderer_scene;
-	bns::LoadSceneFromBnsFileFormat("_test.test", renderer_scene);
+	bns::RaytracerScene renderer_scene;
+	//bns::LoadRaytracerSceneFromBnsFileFormat("triangle-ambient.bns", renderer_scene);
+	bns::LoadRaytracerSceneFromBnsFileFormat("_test.test", renderer_scene);
+	//bns::LoadSceneFromObjFileFormat("teapot.obj", renderer_scene);
 
 	bns::Camera cam = renderer_scene.Cameras[0];
 
 	bns::ColorF** colors = bns::AllocateColors(cam);
-	bns::ThreadedRayTrace(cam,
+	bns::RayTrace(cam,
 		renderer_scene.Shapes.data(), renderer_scene.Shapes.size(),
 		renderer_scene.Lights.data(), renderer_scene.Lights.size(), colors);
 	void* pixels = bns::ColorsToABGR8888Pixels(cam, colors);
+
+	//saveScreenshot("scene_7.png", pixels, cam.ScreenWidth, cam.ScreenHeight);
+
+	FreeImage_DeInitialise();
+
 	bns::FreeColors(cam, colors);
 
 	for (auto it = renderer_scene.Shapes.begin(); it != renderer_scene.Shapes.end(); ++it)

@@ -1,7 +1,7 @@
 #Stanford Dragon
 
 size 640 480
-camera 0 0 20 0 0 -1 0 1 0 60
+camera 0 0 20 0 0 -1 0 1 0 45
 output scene7.png
 
 diffuse 0.4 0.1 0.1
@@ -10,32 +10,10 @@ point 0 20 20 1 1 1
 shininess 20
 specular 0.3 0.3 0.3
 
-# floor 
-pushTransform
-diffuse 0.7 0.7 0.7
-translate 0 -5 0 
-plane
-popTransform
-
-
-# middle sphere
-pushTransform
-translate 4 0 0
-scale 3 3 3
-diffuse 0.7 0.7 0.7
-specular 0.5 0.5 0.5
-sphere 0 0 0 1
-popTransform
-
-diffuse 0.4 0.1 0.1
-
 maxdepth 5
 
 maxverts 50001
 
-pushTransform
-translate -2 0 0
-rotate 0 1 0 40
 vertex 0 0 0
 vertex  1.6831 3.0852 -0.9792
 vertex  1.7310 3.1590 -0.9106
@@ -150041,6 +150019,5 @@ tri 41343 32924 11324
 tri 41343 32922 32924 
 tri 29825 47438 29824 
 tri 29825 42257 47438 
-popTransform
 
 popTransform
